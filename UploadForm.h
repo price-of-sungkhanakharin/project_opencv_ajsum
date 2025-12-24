@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-// Use global variables in unmanaged block to avoid struct metadata issues
+// Use global variables in unmanaged block to avoid struct metadata issuesasdad
 #pragma managed(push, off)
 // Prevent Windows.h min/max macros from interfering with std::min/std::max
 #define NOMINMAX
@@ -13,7 +13,7 @@
 #include <algorithm> // For min, max
 #include <cmath>     // For round
 
-// Use static to avoid linker errors if included in multiple translation units
+// Use static to avoid linker errors if included in multiple translation unitsx
 static cv::dnn::Net* g_net = nullptr;
 static std::vector<std::string> g_classes;
 static std::vector<cv::Scalar> g_colors;
@@ -339,7 +339,7 @@ namespace ConsoleApplication3 {
 	private: System::Void button2_Click(System::Object^ sender, System::EventArgs^ e) {
 		OpenFileDialog^ ofd = gcnew OpenFileDialog();
 		ofd->Filter = "Video Files|*.mp4;*.avi;*.mkv";
-
+		
 		if (ofd->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
 			if (g_net == nullptr) {
 				MessageBox::Show("Warning: AI Model failed to load.", "Warning", MessageBoxButtons::OK, MessageBoxIcon::Warning);
