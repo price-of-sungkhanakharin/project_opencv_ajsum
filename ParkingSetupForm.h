@@ -4,6 +4,8 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include "ParkingSlot.h"
+#include <direct.h>  // For _mkdir
+#include <sys/stat.h> // For stat
 
 namespace ConsoleApplication3 {
 	using namespace System;
@@ -12,6 +14,7 @@ namespace ConsoleApplication3 {
 	using namespace System::Windows::Forms;
 	using namespace System::Data;
 	using namespace System::Drawing;
+	using namespace System::IO;
 
 	public ref class ParkingSetupForm : public System::Windows::Forms::Form
 	{
@@ -23,6 +26,9 @@ namespace ConsoleApplication3 {
 			isDrawing = false;
 			currentPolygon = new std::vector<cv::Point>();
 			templateFrame = new cv::Mat();
+			
+			// ??????????????????? Templates ???????????
+			EnsureTemplateFolderExists();
 		}
 
 	protected:
@@ -40,6 +46,9 @@ namespace ConsoleApplication3 {
 		std::vector<cv::Point>* currentPolygon;
 		bool isDrawing;
 		System::ComponentModel::Container^ components;
+		
+		// ???????????? Templates
+		//static const std::string TEMPLATE_FOLDER = "parking_templates";
 
 	private: System::Windows::Forms::Panel^ panel1;
 	private: System::Windows::Forms::PictureBox^ pictureBox1;
@@ -310,6 +319,43 @@ namespace ConsoleApplication3 {
 		}
 #pragma endregion
 
+	// *** [FIXED] Helper function ?????? Template Folder ***
+	private: std::string GetTemplateFolderPath() {
+		return "parking_templates";
+	}
+
+	// *** [NEW] ????????????????????? Template ***
+	private: void EnsureTemplateFolderExists() {
+		try {
+			std::string folder = GetTemplateFolderPath();
+			struct stat info;
+			if (stat(folder.c_str(), &info) != 0) {
+				#ifdef _WIN32
+					_mkdir(folder.c_str());
+				#else
+					mkdir(folder.c_str(), 0755);
+				#endif
+				
+				String^ msg = "Created template folder: " + gcnew String(folder.c_str());
+				lblStatus->Text = msg;
+			}
+		}
+		catch (...) {
+			MessageBox::Show("Warning: Could not create template folder!", "Warning", 
+				MessageBoxButtons::OK, MessageBoxIcon::Warning);
+		}
+	}
+
+	// *** [FIXED] ????????????? Path ?????????? Template ***
+	private: std::string GetTemplatePath(const std::string& filename) {
+		std::string name = filename;
+		if (name.find(".xml") == std::string::npos) {
+			name += ".xml";
+		}
+		std::string folder = GetTemplateFolderPath();
+		return folder + "/" + name;
+	}
+
 	private: Bitmap^ MatToBitmap(cv::Mat& mat) {
 		if (mat.empty()) return nullptr;
 		cv::Mat rgb;
@@ -460,29 +506,37 @@ namespace ConsoleApplication3 {
 			return;
 		}
 
-		SaveFileDialog^ sfd = gcnew SaveFileDialog();
-		sfd->Filter = "Parking Template|*.xml";
-		sfd->FileName = txtTemplateName->Text;
+		String^ templateName = txtTemplateName->Text->Trim();
+		if (String::IsNullOrEmpty(templateName)) {
+			MessageBox::Show("Please enter a template name!", "Error", 
+				MessageBoxButtons::OK, MessageBoxIcon::Warning);
+			return;
+		}
+
+		std::string filename = msclr::interop::marshal_as<std::string>(templateName);
+		std::string fullPath = GetTemplatePath(filename);
 		
-		if (sfd->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-			std::string filename = msclr::interop::marshal_as<std::string>(sfd->FileName);
-			std::string name = msclr::interop::marshal_as<std::string>(txtTemplateName->Text);
-			std::string desc = msclr::interop::marshal_as<std::string>(txtDescription->Text);
-			
-			if (parkingManager->saveTemplate(filename, name, desc)) {
-				MessageBox::Show("Template saved successfully!\n\nFile: " + sfd->FileName, "Success", 
-					MessageBoxButtons::OK, MessageBoxIcon::Information);
-			}
-			else {
-				MessageBox::Show("Failed to save template!", "Error", 
-					MessageBoxButtons::OK, MessageBoxIcon::Error);
-			}
+		std::string name = msclr::interop::marshal_as<std::string>(txtTemplateName->Text);
+		std::string desc = msclr::interop::marshal_as<std::string>(txtDescription->Text);
+		
+		if (parkingManager->saveTemplate(fullPath, name, desc)) {
+			String^ msg = "Template saved successfully!\n\nFile: " + gcnew String(fullPath.c_str());
+			MessageBox::Show(msg, "Success", MessageBoxButtons::OK, MessageBoxIcon::Information);
+			lblStatus->Text = "Saved: " + gcnew String(fullPath.c_str());
+		}
+		else {
+			MessageBox::Show("Failed to save template!", "Error", 
+				MessageBoxButtons::OK, MessageBoxIcon::Error);
 		}
 	}
 
 	private: System::Void btnLoadTemplate_Click(System::Object^ sender, System::EventArgs^ e) {
 		OpenFileDialog^ ofd = gcnew OpenFileDialog();
 		ofd->Filter = "Parking Template|*.xml";
+		
+		std::string folder = GetTemplateFolderPath();
+		ofd->InitialDirectory = gcnew String(folder.c_str());
+		ofd->Title = "Load Parking Template";
 		
 		if (ofd->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
 			std::string filename = msclr::interop::marshal_as<std::string>(ofd->FileName);
@@ -491,6 +545,7 @@ namespace ConsoleApplication3 {
 				UpdateDisplay();
 				MessageBox::Show("Template loaded successfully!", "Success", 
 					MessageBoxButtons::OK, MessageBoxIcon::Information);
+				lblStatus->Text = "Loaded: " + ofd->FileName;
 			}
 			else {
 				MessageBox::Show("Failed to load template!", "Error", 
@@ -498,5 +553,7 @@ namespace ConsoleApplication3 {
 			}
 		}
 	}
+
+	// ...existing other methods...
 	};
 }
