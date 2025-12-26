@@ -1,9 +1,10 @@
-#pragma once
+﻿#pragma once
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include "online1.h"
 #include "popup1.h"
+#include "ParkingSetupForm.h"
 
 namespace ConsoleApplication3 {
 
@@ -46,6 +47,7 @@ namespace ConsoleApplication3 {
 	private: System::Windows::Forms::Button^ btnSeeCamera;
 	private: System::Windows::Forms::Button^ btnSave;
 	private: System::Windows::Forms::Button^ btnCancel;
+	private: System::Windows::Forms::Button^ btnParkingSetup;
 	private: System::ComponentModel::Container^ components;
 
 	private:
@@ -62,6 +64,7 @@ namespace ConsoleApplication3 {
 			this->label2 = (gcnew System::Windows::Forms::Label());
 			this->label1 = (gcnew System::Windows::Forms::Label());
 			this->pictureBox1 = (gcnew System::Windows::Forms::PictureBox());
+			this->btnParkingSetup = (gcnew System::Windows::Forms::Button());
 			this->btnSeeCamera = (gcnew System::Windows::Forms::Button());
 			this->btnSave = (gcnew System::Windows::Forms::Button());
 			this->btnCancel = (gcnew System::Windows::Forms::Button());
@@ -124,6 +127,7 @@ namespace ConsoleApplication3 {
 			// splitContainer1.Panel2
 			// 
 			this->splitContainer1->Panel2->BackColor = System::Drawing::Color::OldLace;
+			this->splitContainer1->Panel2->Controls->Add(this->btnParkingSetup);
 			this->splitContainer1->Panel2->Controls->Add(this->btnSeeCamera);
 			this->splitContainer1->Panel2->Controls->Add(this->btnSave);
 			this->splitContainer1->Panel2->Controls->Add(this->btnCancel);
@@ -174,6 +178,24 @@ namespace ConsoleApplication3 {
 			this->pictureBox1->SizeMode = System::Windows::Forms::PictureBoxSizeMode::Zoom;
 			this->pictureBox1->TabIndex = 0;
 			this->pictureBox1->TabStop = false;
+			// 
+			// btnParkingSetup
+			// 
+			this->btnParkingSetup->BackColor = System::Drawing::Color::FromArgb(static_cast<System::Int32>(static_cast<System::Byte>(138)), 
+				static_cast<System::Int32>(static_cast<System::Byte>(43)), static_cast<System::Int32>(static_cast<System::Byte>(226)));
+			this->btnParkingSetup->FlatAppearance->BorderSize = 0;
+			this->btnParkingSetup->FlatAppearance->MouseOverBackColor = System::Drawing::Color::FromArgb(static_cast<System::Int32>(static_cast<System::Byte>(120)),
+				static_cast<System::Int32>(static_cast<System::Byte>(30)), static_cast<System::Int32>(static_cast<System::Byte>(200)));
+			this->btnParkingSetup->FlatStyle = System::Windows::Forms::FlatStyle::Flat;
+			this->btnParkingSetup->Font = (gcnew System::Drawing::Font(L"Segoe UI", 13.75F, System::Drawing::FontStyle::Bold));
+			this->btnParkingSetup->ForeColor = System::Drawing::Color::White;
+			this->btnParkingSetup->Location = System::Drawing::Point(112, 557);
+			this->btnParkingSetup->Name = L"btnParkingSetup";
+			this->btnParkingSetup->Size = System::Drawing::Size(253, 60);
+			this->btnParkingSetup->TabIndex = 9;
+			this->btnParkingSetup->Text = L"🅿️ Parking Setup";
+			this->btnParkingSetup->UseVisualStyleBackColor = false;
+			this->btnParkingSetup->Click += gcnew System::EventHandler(this, &MyForm::btnParkingSetup_Click);
 			// 
 			// btnSeeCamera
 			// 
@@ -334,7 +356,10 @@ namespace ConsoleApplication3 {
 			bmp->Save(saveFileDialog->FileName);
 		}
 	}
+
+	private: System::Void btnParkingSetup_Click(System::Object^ sender, System::EventArgs^ e) {
+		ParkingSetupForm^ form = gcnew ParkingSetupForm();
+		form->ShowDialog();
+	}
 	};
 }
-
-

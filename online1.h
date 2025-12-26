@@ -2,6 +2,7 @@
 #include <msclr/marshal_cppstd.h>
 #include <string>
 #include <vector>
+#include "BYTETracker.h"
 
 #pragma managed(push, off)
 #define NOMINMAX
@@ -17,6 +18,7 @@ static cv::dnn::Net* g_net = nullptr;
 static std::vector<std::string> g_classes;
 static std::vector<cv::Scalar> g_colors;
 static cv::VideoCapture* g_cap = nullptr;
+static BYTETracker* g_tracker = nullptr;
 
 // --- Frame Sync Management (ส่วนที่เพิ่มใหม่) ---
 static cv::Mat g_latestRawFrame;
@@ -27,9 +29,8 @@ static std::mutex g_frameMutex;
 static std::mutex g_processMutex;
 static bool g_modelReady = false;
 
-// --- Detection Results ---
-static std::vector<int> g_persistentClassIds;
-static std::vector<cv::Rect> g_persistentBoxes;
+// --- Detection Results (with Tracking) ---
+static std::vector<TrackedObject> g_trackedObjects;
 static long long g_detectionSourceSeq = -1; // บอกว่ากล่องนี้มาจากเฟรมเลขที่เท่าไหร่
 static std::mutex g_detectionMutex;
 
@@ -84,14 +85,19 @@ static void InitGlobalModel(const std::string& modelPath) {
 	std::lock_guard<std::mutex> lock(g_processMutex);
 	g_modelReady = false;
 	if (g_net) { delete g_net; g_net = nullptr; }
+	if (g_tracker) { delete g_tracker; g_tracker = nullptr; }
 
 	try {
 		g_net = new cv::dnn::Net(cv::dnn::readNetFromONNX(modelPath));
-
-		// ใช้ CPU เท่านั้น
 		g_net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
 		g_net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-		OutputDebugStringA("[INFO] Using CPU for inference\n");
+		
+		// Initialize tracker with better parameters
+		// maxFramesLost = 90 frames (~3 seconds at 30fps)
+		// iouThreshold = 0.25 (more lenient for partial occlusion)
+		g_tracker = new BYTETracker(90, 0.25f);
+		
+		OutputDebugStringA("[INFO] Online mode with improved ByteTrack (90 frames tolerance)\n");
 
 		g_classes = {
 			"person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -111,14 +117,16 @@ static void InitGlobalModel(const std::string& modelPath) {
 		}
 		g_modelReady = true;
 	}
-	catch (...) {}
+	catch (...) {
+		if (g_tracker) { delete g_tracker; g_tracker = nullptr; }
+	}
 }
 
 // [FIX] เพิ่ม Parameter frameSeq เพื่อระบุตัวตนของเฟรม
 static void DetectObjectsOnFrame(const cv::Mat& inputFrame, long long frameSeq) {
 	{
 		std::lock_guard<std::mutex> lock(g_processMutex);
-		if (inputFrame.empty() || !g_net || !g_modelReady) return;
+		if (inputFrame.empty() || !g_net || !g_modelReady || !g_tracker) return;
 	}
 
 	try {
@@ -140,7 +148,6 @@ static void DetectObjectsOnFrame(const cv::Mat& inputFrame, long long frameSeq) 
 		if (outputs.empty() || outputs[0].empty()) return;
 
 		cv::Mat output_data = outputs[0];
-		// Handle transpose for YOLO format
 		int rows = output_data.size[1];
 		int dimensions = output_data.size[2];
 
@@ -188,17 +195,28 @@ static void DetectObjectsOnFrame(const cv::Mat& inputFrame, long long frameSeq) 
 		std::vector<int> nms;
 		cv::dnn::NMSBoxes(boxes, confs, CONF_THRESHOLD, NMS_THRESHOLD, nms);
 
-		// *** อัปเดตข้อมูลกล่อง พร้อมกับ Frame Sequence ***
+		// Prepare detections for tracker
+		std::vector<cv::Rect> nms_boxes;
+		std::vector<int> nms_class_ids;
+		std::vector<float> nms_confs;
+		
+		for (int idx : nms) {
+			nms_boxes.push_back(boxes[idx]);
+			nms_class_ids.push_back(class_ids[idx]);
+			nms_confs.push_back(confs[idx]);
+		}
+
+		// Update tracker with new detections
+		std::vector<TrackedObject> trackedObjs;
+		{
+			std::lock_guard<std::mutex> lock(g_processMutex);
+			trackedObjs = g_tracker->update(nms_boxes, nms_class_ids, nms_confs);
+		}
+
+		// Update global tracked objects
 		{
 			std::lock_guard<std::mutex> detLock(g_detectionMutex);
-			g_persistentClassIds.clear();
-			g_persistentBoxes.clear();
-
-			for (int idx : nms) {
-				g_persistentBoxes.push_back(boxes[idx]);
-				g_persistentClassIds.push_back(class_ids[idx]);
-			}
-			// [FIX] บันทึกว่ากล่องนี้มาจากเฟรมไหน
+			g_trackedObjects = trackedObjs;
 			g_detectionSourceSeq = frameSeq;
 		}
 	}
@@ -212,28 +230,59 @@ static cv::Mat DrawPersistentDetections(const cv::Mat& frame, long long displayS
 
 	std::lock_guard<std::mutex> lock(g_detectionMutex);
 
-	// [FIX Logic] ถ้าข้อมูลกล่อง มาจากเฟรมที่ใหม่กว่าภาพที่กำลังแสดง (Future Detection) -> ห้ามวาด!
 	if (g_detectionSourceSeq > displaySeq) {
-		// คุณอาจจะเลือก return result เปล่าๆ หรือวาด text debug ก็ได้
-		// cv::putText(result, "Syncing...", cv::Point(10,30), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,255), 2);
 		return result;
 	}
 
-	for (size_t i = 0; i < g_persistentBoxes.size(); i++) {
-		if (i < g_persistentClassIds.size()) {
-			cv::Rect box = g_persistentBoxes[i];
-			int classId = g_persistentClassIds[i];
-			if (classId >= 0 && classId < g_classes.size()) {
-				cv::rectangle(result, box, g_colors[classId], 2);
-				std::string label = g_classes[classId];
-				int baseline;
-				cv::Size textSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
-				int y_label = (std::max)(0, box.y - textSize.height - 5);
-				cv::rectangle(result, cv::Point(box.x, y_label), cv::Point(box.x + textSize.width, y_label + textSize.height + 5), g_colors[classId], -1);
-				cv::putText(result, label, cv::Point(box.x, y_label + textSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1);
-			}
+	// Draw tracked objects with ID
+	for (const auto& obj : g_trackedObjects) {
+		if (obj.classId >= 0 && obj.classId < g_classes.size()) {
+			cv::Rect box = obj.bbox;
+			
+			// Draw bounding box
+			cv::rectangle(result, box, g_colors[obj.classId], 2);
+			
+			// Create compact label with ID and class name
+			std::string label = "ID:" + std::to_string(obj.id) + " " + g_classes[obj.classId];
+			
+			int baseline;
+			// Reduced font size from 0.6 to 0.4 and thickness from 2 to 1
+			cv::Size textSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.4, 1, &baseline);
+			int y_label = (std::max)(0, box.y - textSize.height - 4);
+			
+			// Draw smaller label background
+			cv::rectangle(result, 
+				cv::Point(box.x, y_label), 
+				cv::Point(box.x + textSize.width, y_label + textSize.height + 4), 
+				g_colors[obj.classId], -1);
+			
+			// Draw label text with smaller font
+			cv::putText(result, label, 
+				cv::Point(box.x, y_label + textSize.height + 1), 
+				cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1);
+			
+			// Draw smaller tracking ID badge at bottom-right of box
+			std::string idBadge = "#" + std::to_string(obj.id);
+			cv::Size badgeSize = cv::getTextSize(idBadge, cv::FONT_HERSHEY_SIMPLEX, 0.35, 1, &baseline);
+			cv::Point badgePos(box.x + box.width - badgeSize.width - 3, box.y + box.height - 3);
+			
+			// Draw smaller badge background
+			cv::rectangle(result,
+				cv::Point(badgePos.x - 2, badgePos.y - badgeSize.height - 2),
+				cv::Point(badgePos.x + badgeSize.width + 2, badgePos.y + 2),
+				cv::Scalar(0, 0, 0), -1);
+			
+			// Draw badge text with smaller font
+			cv::putText(result, idBadge, badgePos,
+				cv::FONT_HERSHEY_SIMPLEX, 0.35, cv::Scalar(255, 255, 0), 1);
 		}
 	}
+	
+	// Draw tracking statistics with smaller font
+	std::string stats = "Tracks: " + std::to_string(g_trackedObjects.size());
+	cv::putText(result, stats, cv::Point(10, 25),
+		cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1);
+	
 	return result;
 }
 
@@ -616,8 +665,7 @@ namespace ConsoleApplication3 {
 		isProcessing = true;
 		{
 			std::lock_guard<std::mutex> lock(g_detectionMutex);
-			g_persistentBoxes.clear();
-			g_persistentClassIds.clear();
+			g_trackedObjects.clear();
 			g_detectionSourceSeq = -1;
 		}
 		if (!processingWorker->IsBusy) processingWorker->RunWorkerAsync();

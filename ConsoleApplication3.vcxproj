@@ -132,6 +132,7 @@
     <ResourceCompile Include="app.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BYTETracker.h" />
     <ClInclude Include="CameraConnectionHelper.h" />
     <ClInclude Include="MyForm.h">
       <FileType>CppForm</FileType>
@@ -139,6 +140,8 @@
     <ClInclude Include="offline1.h">
       <FileType>CppForm</FileType>
     </ClInclude>
+    <ClInclude Include="ParkingSetupForm.h" />
+    <ClInclude Include="ParkingSlot.h" />
     <ClInclude Include="popup1.h">
       <FileType>CppForm</FileType>
     </ClInclude>
