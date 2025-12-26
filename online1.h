@@ -438,7 +438,10 @@ namespace ConsoleApplication3 {
 		UploadForm(void) {
 			InitializeComponent();
 			bufferLock = gcnew Object();
-			currentFrame = nullptr;
+			bmpBuffer1 = nullptr;
+			bmpBuffer2 = nullptr;
+			useBuffer1 = true;
+			
 			isProcessing = false;
 			shouldStop = false;
 
@@ -454,6 +457,8 @@ namespace ConsoleApplication3 {
 			if (components) delete components;
 			if (g_pm_logic_online) { delete g_pm_logic_online; g_pm_logic_online = nullptr; }
 			if (g_pm_display_online) { delete g_pm_display_online; g_pm_display_online = nullptr; }
+			if (bmpBuffer1) delete bmpBuffer1;
+			if (bmpBuffer2) delete bmpBuffer2;
 		}
 
 	private: System::Windows::Forms::Button^ button1;
@@ -467,7 +472,6 @@ namespace ConsoleApplication3 {
 	private: Bitmap^ currentFrame;
 	private: Object^ bufferLock;
 	private: bool isProcessing;
-	private: System::Windows::Forms::Panel^ panel1;
 	private: System::Windows::Forms::Label^ lblCameraName;
 	private: System::Windows::Forms::Button^ btnPlayPause;
 	private: System::Windows::Forms::TrackBar^ trackBar1;
@@ -486,6 +490,11 @@ namespace ConsoleApplication3 {
 	private: bool shouldStop;
 	private: long long lastProcessedSeq = -1;
 	private: long long lastDisplaySeq = -1;
+	private: System::Windows::Forms::SplitContainer^ splitContainer1;
+	private: Bitmap^ bmpBuffer1;
+	private: Bitmap^ bmpBuffer2;
+	private: bool useBuffer1;
+	private: System::Windows::Forms::Label^ label1;
 
 #pragma region Windows Form Designer generated code
 		   void InitializeComponent(void)
@@ -494,7 +503,6 @@ namespace ConsoleApplication3 {
 			   this->timer1 = (gcnew System::Windows::Forms::Timer(this->components));
 			   this->pictureBox1 = (gcnew System::Windows::Forms::PictureBox());
 			   this->processingWorker = (gcnew System::ComponentModel::BackgroundWorker());
-			   this->panel1 = (gcnew System::Windows::Forms::Panel());
 			   this->btnPrevFrame = (gcnew System::Windows::Forms::Button());
 			   this->btnNextFrame = (gcnew System::Windows::Forms::Button());
 			   this->btnOnlineMode = (gcnew System::Windows::Forms::Button());
@@ -510,21 +518,28 @@ namespace ConsoleApplication3 {
 			   this->lblNormal = (gcnew System::Windows::Forms::Label());
 			   this->lblEmpty = (gcnew System::Windows::Forms::Label());
 			   this->btnLiveCamera = (gcnew System::Windows::Forms::Button());
+			   this->splitContainer1 = (gcnew System::Windows::Forms::SplitContainer());
+			   this->label1 = (gcnew System::Windows::Forms::Label());
 			   (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pictureBox1))->BeginInit();
-			   this->panel1->SuspendLayout();
 			   (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->trackBar1))->BeginInit();
+			   (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->splitContainer1))->BeginInit();
+			   this->splitContainer1->Panel1->SuspendLayout();
+			   this->splitContainer1->Panel2->SuspendLayout();
+			   this->splitContainer1->SuspendLayout();
 			   this->panel2->SuspendLayout();
 			   this->SuspendLayout();
 			   
 
 			   this->timer1->Interval = 15;
 			   this->timer1->Tick += gcnew System::EventHandler(this, &UploadForm::timer1_Tick);
+			   this->timer1->Enabled = true;
 			   
 
 			   this->pictureBox1->BackColor = System::Drawing::Color::White;
-			   this->pictureBox1->Location = System::Drawing::Point(23, 80);
+			   this->pictureBox1->Dock = System::Windows::Forms::DockStyle::Fill;
+			   this->pictureBox1->Location = System::Drawing::Point(30, 80);
 			   this->pictureBox1->Name = L"pictureBox1";
-			   this->pictureBox1->Size = System::Drawing::Size(800, 380);
+			   this->pictureBox1->Size = System::Drawing::Size(949, 699);
 			   this->pictureBox1->SizeMode = System::Windows::Forms::PictureBoxSizeMode::Zoom;
 			   this->pictureBox1->TabIndex = 1;
 			   this->pictureBox1->TabStop = false;
@@ -534,168 +549,216 @@ namespace ConsoleApplication3 {
 			   this->processingWorker->DoWork += gcnew System::ComponentModel::DoWorkEventHandler(this, &UploadForm::processingWorker_DoWork);
 			   
 
-			   this->panel1->BackColor = System::Drawing::Color::LightSteelBlue;
-			   this->panel1->Controls->Add(this->btnPrevFrame);
-			   this->panel1->Controls->Add(this->btnNextFrame);
-			   this->panel1->Controls->Add(this->btnOnlineMode);
-			   this->panel1->Controls->Add(this->btnPlayPause);
-			   this->panel1->Controls->Add(this->trackBar1);
-			   this->panel1->Controls->Add(this->lblCameraName);
-			   this->panel1->Controls->Add(this->pictureBox1);
-			   this->panel1->Location = System::Drawing::Point(12, 12);
-			   this->panel1->Name = L"panel1";
-			   this->panel1->Size = System::Drawing::Size(851, 484);
-			   this->panel1->TabIndex = 4;
-			   
-
 			   this->btnPrevFrame->BackColor = System::Drawing::Color::Yellow;
-			   this->btnPrevFrame->Location = System::Drawing::Point(13, 25);
+			   this->btnPrevFrame->Location = System::Drawing::Point(42, 47);
 			   this->btnPrevFrame->Name = L"btnPrevFrame";
-			   this->btnPrevFrame->Size = System::Drawing::Size(27, 32);
-			   this->btnPrevFrame->TabIndex = 7;
+			   this->btnPrevFrame->Size = System::Drawing::Size(28, 23);
+			   this->btnPrevFrame->TabIndex = 0;
 			   this->btnPrevFrame->Text = L"<";
 			   this->btnPrevFrame->UseVisualStyleBackColor = false;
 			   
 
 			   this->btnNextFrame->BackColor = System::Drawing::Color::Yellow;
-			   this->btnNextFrame->Location = System::Drawing::Point(104, 24);
+			   this->btnNextFrame->Location = System::Drawing::Point(184, 47);
 			   this->btnNextFrame->Name = L"btnNextFrame";
-			   this->btnNextFrame->Size = System::Drawing::Size(27, 32);
-			   this->btnNextFrame->TabIndex = 6;
+			   this->btnNextFrame->Size = System::Drawing::Size(27, 23);
+			   this->btnNextFrame->TabIndex = 1;
 			   this->btnNextFrame->Text = L">";
 			   this->btnNextFrame->UseVisualStyleBackColor = false;
 			   
 
 			   this->btnOnlineMode->BackColor = System::Drawing::Color::FromArgb(static_cast<System::Int32>(static_cast<System::Byte>(40)), 
-		static_cast<System::Int32>(static_cast<System::Byte>(167)), static_cast<System::Int32>(static_cast<System::Byte>(69)));
-	this->btnOnlineMode->ForeColor = System::Drawing::SystemColors::ButtonHighlight;
-	this->btnOnlineMode->Location = System::Drawing::Point(731, 11);
-	this->btnOnlineMode->Name = L"btnOnlineMode";
-	this->btnOnlineMode->Size = System::Drawing::Size(112, 46);
-	this->btnOnlineMode->TabIndex = 5;
-	this->btnOnlineMode->Text = L"Online";
-	this->btnOnlineMode->UseVisualStyleBackColor = false;
-	
-	this->btnPlayPause->Location = System::Drawing::Point(470, 20);
-	this->btnPlayPause->Name = L"btnPlayPause";
-	this->btnPlayPause->Size = System::Drawing::Size(32, 29);
-	this->btnPlayPause->TabIndex = 4;
-	this->btnPlayPause->Text = L"▶";
-	this->btnPlayPause->UseVisualStyleBackColor = true;
-	
-	this->trackBar1->Location = System::Drawing::Point(508, 20);
-	this->trackBar1->Name = L"trackBar1";
-	this->trackBar1->Size = System::Drawing::Size(217, 45);
-	this->trackBar1->TabIndex = 3;
-	
-	this->lblCameraName->AutoSize = true;
-	this->lblCameraName->BackColor = System::Drawing::Color::Yellow;
-	this->lblCameraName->Location = System::Drawing::Point(46, 34);
-	this->lblCameraName->Name = L"lblCameraName";
-	this->lblCameraName->Size = System::Drawing::Size(52, 13);
-	this->lblCameraName->TabIndex = 2;
-	this->lblCameraName->Text = L"Camera 1";
-	
-	this->panel2->BackColor = System::Drawing::Color::LightSteelBlue;
-	this->panel2->Controls->Add(this->chkParkingMode);
-	this->panel2->Controls->Add(this->btnLoadParkingTemplate);
-	this->panel2->Controls->Add(this->lblLogs);
-	this->panel2->Controls->Add(this->panel3);
-	this->panel2->Controls->Add(this->lblViolation);
-	this->panel2->Controls->Add(this->lblNormal);
-	this->panel2->Controls->Add(this->lblEmpty);
-	this->panel2->Controls->Add(this->btnLiveCamera);
-	this->panel2->Location = System::Drawing::Point(869, 12);
-	this->panel2->Name = L"panel2";
-	this->panel2->Size = System::Drawing::Size(541, 484);
-	this->panel2->TabIndex = 5;
-	
-	this->chkParkingMode->AutoSize = true;
-	this->chkParkingMode->Location = System::Drawing::Point(438, 111);
-	this->chkParkingMode->Name = L"chkParkingMode";
-	this->chkParkingMode->Size = System::Drawing::Size(98, 17);
-	this->chkParkingMode->TabIndex = 9;
-	this->chkParkingMode->Text = L"Enable Parking";
-	this->chkParkingMode->UseVisualStyleBackColor = true;
-	this->chkParkingMode->CheckedChanged += gcnew System::EventHandler(this, &UploadForm::chkParkingMode_CheckedChanged);
-	
-	this->btnLoadParkingTemplate->BackColor = System::Drawing::Color::LightGreen;
-	this->btnLoadParkingTemplate->Location = System::Drawing::Point(438, 73);
-	this->btnLoadParkingTemplate->Name = L"btnLoadParkingTemplate";
-	this->btnLoadParkingTemplate->Size = System::Drawing::Size(100, 25);
-	this->btnLoadParkingTemplate->TabIndex = 8;
-	this->btnLoadParkingTemplate->Text = L"Load Template";
-	this->btnLoadParkingTemplate->UseVisualStyleBackColor = false;
-	this->btnLoadParkingTemplate->Click += gcnew System::EventHandler(this, &UploadForm::btnLoadParkingTemplate_Click);
-	
-	this->panel3->BackColor = System::Drawing::Color::LemonChiffon;
-	this->panel3->Location = System::Drawing::Point(116, 198);
-	this->panel3->Name = L"panel3";
-	this->panel3->Size = System::Drawing::Size(329, 38);
-	this->panel3->TabIndex = 5;
-	
-	this->lblViolation->AutoSize = true;
-	this->lblViolation->BackColor = System::Drawing::Color::OrangeRed;
-	this->lblViolation->Location = System::Drawing::Point(399, 142);
-	this->lblViolation->Name = L"lblViolation";
-	this->lblViolation->Size = System::Drawing::Size(47, 13);
-	this->lblViolation->TabIndex = 4;
-	this->lblViolation->Text = L"Violation";
-	
-	this->lblNormal->AutoSize = true;
-	this->lblNormal->BackColor = System::Drawing::Color::Yellow;
-	this->lblNormal->Location = System::Drawing::Point(244, 142);
-	this->lblNormal->Name = L"lblNormal";
-	this->lblNormal->Size = System::Drawing::Size(40, 13);
-	this->lblNormal->TabIndex = 3;
-	this->lblNormal->Text = L"Normal";
-	
-	this->lblEmpty->AutoSize = true;
-	this->lblEmpty->BackColor = System::Drawing::Color::GreenYellow;
-	this->lblEmpty->Location = System::Drawing::Point(93, 142);
-	this->lblEmpty->Name = L"lblEmpty";
-	this->lblEmpty->Size = System::Drawing::Size(36, 13);
-	this->lblEmpty->TabIndex = 0;
-	this->lblEmpty->Text = L"Empty";
-	
-	this->btnLiveCamera->BackColor = System::Drawing::Color::FromArgb(static_cast<System::Int32>(static_cast<System::Byte>(40)), 
-		static_cast<System::Int32>(static_cast<System::Byte>(167)), static_cast<System::Int32>(static_cast<System::Byte>(69)));
-	this->btnLiveCamera->ForeColor = System::Drawing::SystemColors::ButtonHighlight;
-	this->btnLiveCamera->Location = System::Drawing::Point(438, 11);
-	this->btnLiveCamera->Name = L"btnLiveCamera";
-	this->btnLiveCamera->Size = System::Drawing::Size(100, 56);
-	this->btnLiveCamera->TabIndex = 0;
-	this->btnLiveCamera->Text = L"📹 Live Camera";
-	this->btnLiveCamera->UseVisualStyleBackColor = false;
-	this->btnLiveCamera->Click += gcnew System::EventHandler(this, &UploadForm::btnLiveCamera_Click);
-	
-	this->lblLogs->Anchor = System::Windows::Forms::AnchorStyles::Top;
-	this->lblLogs->AutoSize = true;
-	this->lblLogs->Font = (gcnew System::Drawing::Font(L"Segoe UI", 16.75F, System::Drawing::FontStyle::Bold, System::Drawing::GraphicsUnit::Point,
-		static_cast<System::Byte>(0)));
-	this->lblLogs->ForeColor = System::Drawing::Color::Black;
-	this->lblLogs->Location = System::Drawing::Point(211, 42);
-	this->lblLogs->Margin = System::Windows::Forms::Padding(100, 0, 3, 0);
-	this->lblLogs->Name = L"lblLogs";
-	this->lblLogs->Size = System::Drawing::Size(163, 31);
-	this->lblLogs->TabIndex = 7;
-	this->lblLogs->Text = L"logs 25/12/67";
-	
-	this->AutoScaleDimensions = System::Drawing::SizeF(6, 13);
-	this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
-	this->ClientSize = System::Drawing::Size(1422, 508);
-	this->Controls->Add(this->panel2);
-	this->Controls->Add(this->panel1);
-	this->Name = L"UploadForm";
-	this->Text = L"Online Mode - Loading Model...";
-	this->FormClosing += gcnew System::Windows::Forms::FormClosingEventHandler(this, &UploadForm::UploadForm_FormClosing);
-	(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pictureBox1))->EndInit();
-	this->panel1->ResumeLayout(false);
-	this->panel1->PerformLayout();
-	(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->trackBar1))->EndInit();
-	this->panel2->ResumeLayout(false);
-	this->panel2->PerformLayout();
-	this->ResumeLayout(false);
+				   static_cast<System::Int32>(static_cast<System::Byte>(167)), static_cast<System::Int32>(static_cast<System::Byte>(69)));
+			   this->btnOnlineMode->ForeColor = System::Drawing::SystemColors::ButtonHighlight;
+			   this->btnOnlineMode->Location = System::Drawing::Point(851, 46);
+			   this->btnOnlineMode->Name = L"btnOnlineMode";
+			   this->btnOnlineMode->Size = System::Drawing::Size(112, 46);
+			   this->btnOnlineMode->TabIndex = 2;
+			   this->btnOnlineMode->Text = L"Online";
+			   this->btnOnlineMode->UseVisualStyleBackColor = false;
+			   
+
+			   this->btnPlayPause->Location = System::Drawing::Point(554, 47);
+			   this->btnPlayPause->Name = L"btnPlayPause";
+			   this->btnPlayPause->Size = System::Drawing::Size(45, 44);
+			   this->btnPlayPause->TabIndex = 3;
+			   this->btnPlayPause->Text = L"▶";
+			   this->btnPlayPause->Click += gcnew System::EventHandler(this, &UploadForm::btnPlayPause_Click);
+			   
+
+			   this->trackBar1->Location = System::Drawing::Point(605, 47);
+			   this->trackBar1->Name = L"trackBar1";
+			   this->trackBar1->Size = System::Drawing::Size(217, 45);
+			   this->trackBar1->TabIndex = 4;
+			   
+
+			   this->lblCameraName->AutoSize = true;
+			   this->lblCameraName->BackColor = System::Drawing::Color::White;
+			   this->lblCameraName->Font = (gcnew System::Drawing::Font(L"Segoe UI", 16.25F, System::Drawing::FontStyle::Bold, System::Drawing::GraphicsUnit::Point,
+				   static_cast<System::Byte>(0)));
+			   this->lblCameraName->ForeColor = System::Drawing::Color::FromArgb(static_cast<System::Int32>(static_cast<System::Byte>(45)), static_cast<System::Int32>(static_cast<System::Byte>(45)),
+				   static_cast<System::Int32>(static_cast<System::Byte>(48)));
+			   this->lblCameraName->Location = System::Drawing::Point(76, 41);
+			   this->lblCameraName->Name = L"lblCameraName";
+			   this->lblCameraName->Size = System::Drawing::Size(102, 30);
+			   this->lblCameraName->TabIndex = 6;
+			   this->lblCameraName->Text = L"camera1";
+			   
+
+			   this->splitContainer1->Dock = System::Windows::Forms::DockStyle::Fill;
+			   this->splitContainer1->Location = System::Drawing::Point(0, 0);
+			   this->splitContainer1->Name = L"splitContainer1";
+			   this->splitContainer1->Panel1->BackColor = System::Drawing::Color::LightSteelBlue;
+			   this->splitContainer1->Panel1->Controls->Add(this->label1);
+			   this->splitContainer1->Panel1->Controls->Add(this->btnOnlineMode);
+			   this->splitContainer1->Panel1->Controls->Add(this->trackBar1);
+			   this->splitContainer1->Panel1->Controls->Add(this->btnPlayPause);
+			   this->splitContainer1->Panel1->Controls->Add(this->btnNextFrame);
+			   this->splitContainer1->Panel1->Controls->Add(this->btnPrevFrame);
+			   this->splitContainer1->Panel1->Controls->Add(this->pictureBox1);
+			   this->splitContainer1->Panel1->Padding = System::Windows::Forms::Padding(30);
+			   
+
+			   this->splitContainer1->Panel2->BackColor = System::Drawing::Color::LightSteelBlue;
+			   this->splitContainer1->Panel2->Controls->Add(this->lblViolation);
+			   this->splitContainer1->Panel2->Controls->Add(this->lblNormal);
+			   this->splitContainer1->Panel2->Controls->Add(this->lblEmpty);
+			   this->splitContainer1->Panel2->Controls->Add(this->btnLoadParkingTemplate);
+			   this->splitContainer1->Panel2->Controls->Add(this->chkParkingMode);
+			   this->splitContainer1->Panel2->Controls->Add(this->btnLiveCamera);
+			   this->splitContainer1->Panel2->Controls->Add(this->lblLogs);
+			   this->splitContainer1->Panel2->Controls->Add(this->panel3);
+			   this->splitContainer1->Size = System::Drawing::Size(1443, 759);
+			   this->splitContainer1->SplitterDistance = 1009;
+			   this->splitContainer1->TabIndex = 5;
+			   
+
+			   this->panel2->BackColor = System::Drawing::Color::LightSteelBlue;
+			   this->panel2->Location = System::Drawing::Point(869, 12);
+			   this->panel2->Name = L"panel2";
+			   this->panel2->Size = System::Drawing::Size(541, 484);
+			   this->panel2->TabIndex = 5;
+			   
+
+			   this->chkParkingMode->AutoSize = true;
+			   this->chkParkingMode->Location = System::Drawing::Point(14, 96);
+			   this->chkParkingMode->Name = L"chkParkingMode";
+			   this->chkParkingMode->Size = System::Drawing::Size(98, 17);
+			   this->chkParkingMode->TabIndex = 8;
+			   this->chkParkingMode->Text = L"Enable Parking";
+			   this->chkParkingMode->CheckedChanged += gcnew System::EventHandler(this, &UploadForm::chkParkingMode_CheckedChanged);
+			   
+
+			   this->btnLoadParkingTemplate->BackColor = System::Drawing::Color::LightGreen;
+			   this->btnLoadParkingTemplate->Location = System::Drawing::Point(177, 334);
+			   this->btnLoadParkingTemplate->Name = L"btnLoadParkingTemplate";
+			   this->btnLoadParkingTemplate->Size = System::Drawing::Size(100, 25);
+			   this->btnLoadParkingTemplate->TabIndex = 7;
+			   this->btnLoadParkingTemplate->Text = L"Load Template";
+			   this->btnLoadParkingTemplate->UseVisualStyleBackColor = false;
+			   this->btnLoadParkingTemplate->Click += gcnew System::EventHandler(this, &UploadForm::btnLoadParkingTemplate_Click);
+			   
+
+			   this->lblViolation->AutoSize = true;
+			   this->lblViolation->BackColor = System::Drawing::Color::Red;
+			   this->lblViolation->Font = (gcnew System::Drawing::Font(L"Segoe UI", 16.25F, System::Drawing::FontStyle::Bold, System::Drawing::GraphicsUnit::Point,
+				   static_cast<System::Byte>(0)));
+			   this->lblViolation->ForeColor = System::Drawing::Color::FromArgb(static_cast<System::Int32>(static_cast<System::Byte>(45)), static_cast<System::Int32>(static_cast<System::Byte>(45)),
+				   static_cast<System::Int32>(static_cast<System::Byte>(48)));
+			   this->lblViolation->Location = System::Drawing::Point(282, 168);
+			   this->lblViolation->Name = L"lblViolation";
+			   this->lblViolation->Size = System::Drawing::Size(106, 30);
+			   this->lblViolation->TabIndex = 11;
+			   this->lblViolation->Text = L"Violation";
+			   
+
+			   this->lblNormal->AutoSize = true;
+			   this->lblNormal->BackColor = System::Drawing::Color::Yellow;
+			   this->lblNormal->Font = (gcnew System::Drawing::Font(L"Segoe UI", 16.25F, System::Drawing::FontStyle::Bold, System::Drawing::GraphicsUnit::Point,
+				   static_cast<System::Byte>(0)));
+			   this->lblNormal->ForeColor = System::Drawing::Color::FromArgb(static_cast<System::Int32>(static_cast<System::Byte>(45)), static_cast<System::Int32>(static_cast<System::Byte>(45)),
+				   static_cast<System::Int32>(static_cast<System::Byte>(48)));
+			   this->lblNormal->Location = System::Drawing::Point(157, 168);
+			   this->lblNormal->Name = L"lblNormal";
+			   this->lblNormal->Size = System::Drawing::Size(90, 30);
+			   this->lblNormal->TabIndex = 10;
+			   this->lblNormal->Text = L"Normal";
+			   
+
+			   this->lblEmpty->AutoSize = true;
+			   this->lblEmpty->BackColor = System::Drawing::Color::FromArgb(static_cast<System::Int32>(static_cast<System::Byte>(128)), static_cast<System::Int32>(static_cast<System::Byte>(255)),
+				   static_cast<System::Int32>(static_cast<System::Byte>(128)));
+			   this->lblEmpty->Font = (gcnew System::Drawing::Font(L"Segoe UI", 16.25F, System::Drawing::FontStyle::Bold, System::Drawing::GraphicsUnit::Point,
+				   static_cast<System::Byte>(0)));
+			   this->lblEmpty->ForeColor = System::Drawing::Color::FromArgb(static_cast<System::Int32>(static_cast<System::Byte>(45)), static_cast<System::Int32>(static_cast<System::Byte>(45)),
+				   static_cast<System::Int32>(static_cast<System::Byte>(48)));
+			   this->lblEmpty->Location = System::Drawing::Point(44, 168);
+			   this->lblEmpty->Name = L"lblEmpty";
+			   this->lblEmpty->Size = System::Drawing::Size(80, 30);
+			   this->lblEmpty->TabIndex = 9;
+			   this->lblEmpty->Text = L"Empty";
+			   
+
+			   this->btnLiveCamera->BackColor = System::Drawing::Color::FromArgb(static_cast<System::Int32>(static_cast<System::Byte>(40)), 
+				   static_cast<System::Int32>(static_cast<System::Byte>(167)), static_cast<System::Int32>(static_cast<System::Byte>(69)));
+			   this->btnLiveCamera->ForeColor = System::Drawing::SystemColors::ButtonHighlight;
+			   this->btnLiveCamera->Location = System::Drawing::Point(14, 25);
+			   this->btnLiveCamera->Name = L"btnLiveCamera";
+			   this->btnLiveCamera->Size = System::Drawing::Size(100, 56);
+			   this->btnLiveCamera->TabIndex = 0;
+			   this->btnLiveCamera->Text = L"📹 Live Camera";
+			   this->btnLiveCamera->UseVisualStyleBackColor = false;
+			   this->btnLiveCamera->Click += gcnew System::EventHandler(this, &UploadForm::btnLiveCamera_Click);
+			   
+
+			   this->panel3->BackColor = System::Drawing::Color::LemonChiffon;
+			   this->panel3->Location = System::Drawing::Point(42, 229);
+			   this->panel3->Name = L"panel3";
+			   this->panel3->Size = System::Drawing::Size(346, 38);
+			   this->panel3->TabIndex = 1;
+			   
+
+			   this->lblLogs->AutoSize = true;
+			   this->lblLogs->Font = (gcnew System::Drawing::Font(L"Segoe UI", 16.75F, System::Drawing::FontStyle::Bold));
+			   this->lblLogs->Location = System::Drawing::Point(144, 30);
+			   this->lblLogs->Name = L"lblLogs";
+			   this->lblLogs->Size = System::Drawing::Size(163, 31);
+			   this->lblLogs->TabIndex = 0;
+			   this->lblLogs->Text = L"logs 25/12/67";
+			   
+
+			   // label1
+			   //
+			   this->label1->AutoSize = true;
+			   this->label1->BackColor = System::Drawing::Color::White;
+			   this->label1->Font = (gcnew System::Drawing::Font(L"Segoe UI", 16.25F, System::Drawing::FontStyle::Bold, System::Drawing::GraphicsUnit::Point,
+				   static_cast<System::Byte>(0)));
+			   this->label1->ForeColor = System::Drawing::Color::FromArgb(static_cast<System::Int32>(static_cast<System::Byte>(45)), static_cast<System::Int32>(static_cast<System::Byte>(45)),
+				   static_cast<System::Int32>(static_cast<System::Byte>(48)));
+			   this->label1->Location = System::Drawing::Point(76, 41);
+			   this->label1->Name = L"label1";
+			   this->label1->Size = System::Drawing::Size(102, 30);
+			   this->label1->TabIndex = 6;
+			   this->label1->Text = L"camera1";
+			   
+
+			   this->AutoScaleDimensions = System::Drawing::SizeF(6, 13);
+			   this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
+			   this->ClientSize = System::Drawing::Size(1443, 759);
+			   this->Controls->Add(this->splitContainer1);
+			   this->Name = L"UploadForm";
+			   this->Text = L"Online Mode - Loading Model...";
+			   this->FormClosing += gcnew System::Windows::Forms::FormClosingEventHandler(this, &UploadForm::UploadForm_FormClosing);
+			   (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pictureBox1))->EndInit();
+			   this->splitContainer1->Panel1->ResumeLayout(false);
+			   this->splitContainer1->Panel1->PerformLayout();
+			   this->splitContainer1->Panel2->ResumeLayout(false);
+			   this->splitContainer1->Panel2->PerformLayout();
+			   (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->splitContainer1))->EndInit();
+			   (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->trackBar1))->EndInit();
+			    this->panel2->ResumeLayout(false);
+			   this->panel2->PerformLayout();
+			   this->ResumeLayout(false);
 		   }
 #pragma endregion
 
@@ -715,7 +778,98 @@ namespace ConsoleApplication3 {
 		catch (...) { return nullptr; }
 	}
 
-	// *** [OPTIMIZED] READER THREAD - วาดภาพเสร็จก่อนส่ง ***
+	private: void UpdatePictureBox(cv::Mat& mat) {
+		if (mat.empty() || mat.type() != CV_8UC3) return;
+		int w = mat.cols;
+		int h = mat.rows;
+
+		Bitmap^ targetBmp = useBuffer1 ? bmpBuffer1 : bmpBuffer2;
+
+		if (targetBmp == nullptr || targetBmp->Width != w || targetBmp->Height != h) {
+			if (targetBmp != nullptr) delete targetBmp;
+			targetBmp = gcnew Bitmap(w, h, System::Drawing::Imaging::PixelFormat::Format24bppRgb);
+			if (useBuffer1) bmpBuffer1 = targetBmp; else bmpBuffer2 = targetBmp;
+		}
+
+		System::Drawing::Rectangle rect = System::Drawing::Rectangle(0, 0, w, h);
+		System::Drawing::Imaging::BitmapData^ bmpData = targetBmp->LockBits(rect, System::Drawing::Imaging::ImageLockMode::WriteOnly, targetBmp->PixelFormat);
+		for (int y = 0; y < h; y++) {
+			memcpy((unsigned char*)bmpData->Scan0.ToPointer() + y * bmpData->Stride, mat.data + y * mat.step, w * 3);
+		}
+		targetBmp->UnlockBits(bmpData);
+
+		pictureBox1->Image = targetBmp;
+		useBuffer1 = !useBuffer1;
+	}
+
+	// *** [OPTIMIZED] UI TIMER - หยิบภาพมาโชว์อย่างเดียว (0.1ms) ***
+	private: System::Void timer1_Tick(System::Object^ sender, System::EventArgs^ e) {
+		try {
+			cv::Mat finalFrame;
+			long long seq = 0;
+			GetProcessedFrameOnline(finalFrame, seq);
+
+			if (seq == lastDisplaySeq) return;
+			lastDisplaySeq = seq;
+
+			if (!finalFrame.empty()) {
+				UpdatePictureBox(finalFrame);
+			}
+		}
+		catch (...) {}
+	}
+	private: void StopProcessing() {
+		shouldStop = true;
+		isProcessing = false;
+		timer1->Stop();
+		if (processingWorker->IsBusy) processingWorker->CancelAsync();
+	}
+
+	private: System::Void btnPlayPause_Click(System::Object^ sender, System::EventArgs^ e) {
+		if (isProcessing) StopProcessing(); else StartProcessing();
+	}
+
+	private: System::Void LoadModel_DoWork(System::Object^ sender, DoWorkEventArgs^ e) {
+		try {
+			std::string modelPath = "models/test/yolo11n.onnx";
+			InitGlobalModel(modelPath);
+			e->Result = true;
+		}
+		catch (const std::exception& ex) { e->Result = gcnew System::String(ex.what()); }
+	}
+
+	private: System::Void LoadModel_Completed(System::Object^ sender, RunWorkerCompletedEventArgs^ e) {
+		if (e->Result != nullptr && e->Result->GetType() == bool::typeid && safe_cast<bool>(e->Result)) {
+			this->Text = L"Online Mode - YOLO Detection (Ready)";
+			btnLiveCamera->Enabled = true;
+			btnLoadParkingTemplate->Enabled = true;
+			MessageBox::Show("Model loaded!", "Success", MessageBoxButtons::OK, MessageBoxIcon::Information);
+		}
+		else {
+			MessageBox::Show("Error loading model", "Error", MessageBoxButtons::OK, MessageBoxIcon::Error);
+		}
+	}
+
+	private: void StartProcessing() {
+		shouldStop = false;
+		isProcessing = true;
+		{
+			std::lock_guard<std::mutex> lock(g_onlineStateMutex);
+			g_onlineState = OnlineAppState();
+		}
+		ResetParkingCache_Online();
+
+		if (!processingWorker->IsBusy) processingWorker->RunWorkerAsync();
+
+		if (readerThread == nullptr || !readerThread->IsAlive) {
+			readerThread = gcnew Thread(gcnew ThreadStart(this, &UploadForm::CameraReaderLoop));
+			readerThread->IsBackground = true;
+			readerThread->Start();
+		}
+
+		timer1->Start();
+	}
+
 	private: void CameraReaderLoop() {
 		double ticksPerFrame = 1000.0 / 30.0;
 		if (g_cameraFPS > 0) ticksPerFrame = 1000.0 / g_cameraFPS;
@@ -749,11 +903,9 @@ namespace ConsoleApplication3 {
 					currentSeq = g_frameSeq_online;
 				}
 
-				// *** [NEW] วาดภาพทันที (Reader ทำ) ***
 				cv::Mat renderedFrame;
 				DrawSceneOnline(tempFrame, currentSeq, renderedFrame);
 
-				// ส่งภาพสำเร็จรูป
 				if (!renderedFrame.empty()) {
 					std::lock_guard<std::mutex> lock(g_processedMutex_online);
 					g_processedFrame_online = renderedFrame.clone();
@@ -770,7 +922,6 @@ namespace ConsoleApplication3 {
 		}
 	}
 
-		   // [WORKER THREAD] AI Processing (เหมือนออฟไลน์)
 	private: System::Void processingWorker_DoWork(System::Object^ sender, DoWorkEventArgs^ e) {
 		BackgroundWorker^ worker = safe_cast<BackgroundWorker^>(sender);
 		lastProcessedSeq = -1;
@@ -789,81 +940,6 @@ namespace ConsoleApplication3 {
 				}
 			}
 			catch (...) { Threading::Thread::Sleep(50); }
-		}
-	}
-
-	// *** [OPTIMIZED] UI TIMER - หยิบภาพมาโชว์อย่างเดียว (0.1ms) ***
-	private: System::Void timer1_Tick(System::Object^ sender, System::EventArgs^ e) {
-		try {
-			cv::Mat finalFrame;
-			long long seq = 0;
-			GetProcessedFrameOnline(finalFrame, seq);
-
-			if (seq == lastDisplaySeq) return;
-			lastDisplaySeq = seq;
-
-			if (!finalFrame.empty()) {
-				Bitmap^ newFrame = MatToBitmap(finalFrame);
-				if (newFrame != nullptr) {
-					Monitor::Enter(bufferLock);
-					try {
-						if (currentFrame != nullptr) delete currentFrame;
-						currentFrame = newFrame;
-						if (pictureBox1->Image) delete pictureBox1->Image;
-						pictureBox1->Image = gcnew Bitmap(currentFrame);
-					}
-					finally { Monitor::Exit(bufferLock); }
-				}
-			}
-		}
-		catch (...) {}
-	}
-
-	private: void StartProcessing() {
-		shouldStop = false;
-		isProcessing = true;
-		{
-			std::lock_guard<std::mutex> lock(g_onlineStateMutex);
-			g_onlineState = OnlineAppState();
-		}
-		ResetParkingCache_Online();
-
-		if (!processingWorker->IsBusy) processingWorker->RunWorkerAsync();
-
-		if (readerThread == nullptr || !readerThread->IsAlive) {
-			readerThread = gcnew Thread(gcnew ThreadStart(this, &UploadForm::CameraReaderLoop));
-			readerThread->IsBackground = true;
-			readerThread->Start();
-		}
-
-		timer1->Start();
-	}
-
-	private: void StopProcessing() {
-		shouldStop = true;
-		isProcessing = false;
-		timer1->Stop();
-		if (processingWorker->IsBusy) processingWorker->CancelAsync();
-	}
-
-	private: System::Void LoadModel_DoWork(System::Object^ sender, DoWorkEventArgs^ e) {
-		try {
-			std::string modelPath = "models/test/yolo11n.onnx";
-			InitGlobalModel(modelPath);
-			e->Result = true;
-		}
-		catch (const std::exception& ex) { e->Result = gcnew System::String(ex.what()); }
-	}
-
-	private: System::Void LoadModel_Completed(System::Object^ sender, RunWorkerCompletedEventArgs^ e) {
-		if (e->Result != nullptr && e->Result->GetType() == bool::typeid && safe_cast<bool>(e->Result)) {
-			this->Text = L"Online Mode - YOLO Detection (Ready)";
-			btnLiveCamera->Enabled = true;
-			btnLoadParkingTemplate->Enabled = true;
-			MessageBox::Show("Model loaded!", "Success", MessageBoxButtons::OK, MessageBoxIcon::Information);
-		}
-		else {
-			MessageBox::Show("Error loading model", "Error", MessageBoxButtons::OK, MessageBoxIcon::Error);
 		}
 	}
 
@@ -1074,7 +1150,6 @@ namespace ConsoleApplication3 {
 		OpenFileDialog^ ofd = gcnew OpenFileDialog();
 		ofd->Filter = "Parking Template|*.xml";
 		
-		// ใช้ full path
 		char buffer[MAX_PATH];
 		_getcwd(buffer, MAX_PATH);
 		std::string currentDir(buffer);
@@ -1099,12 +1174,12 @@ namespace ConsoleApplication3 {
 	private: System::Void chkParkingMode_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
 		g_parkingEnabled_online = chkParkingMode->Checked;
 		if (chkParkingMode->Checked) {
-			lblCameraName->Text = "Parking Mode ON";
-			lblCameraName->BackColor = System::Drawing::Color::LightGreen;
+			label1->Text = L"Parking Mode ON";
+			label1->BackColor = System::Drawing::Color::LightGreen;
 		}
 		else {
-			lblCameraName->Text = "Camera 1";
-			lblCameraName->BackColor = System::Drawing::Color::Yellow;
+			label1->Text = L"Camera 1";
+			label1->BackColor = System::Drawing::Color::Yellow;
 		}
 	}
 
