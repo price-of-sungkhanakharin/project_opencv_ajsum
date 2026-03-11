@@ -4,446 +4,1790 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Parking - Web Dashboard</title>
+    <title>Smart Parking - Control Center</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H12c-.6 0-1.2.3-1.6.8C9.5 8.7 8 10 8 10s-2.7.6-4.5 1.1c-.8.2-1.5 1-1.5 1.9v3c0 .6.4 1 1 1h2'/><circle cx='7' cy='17' r='2'/><path d='M9 17h6'/><circle cx='17' cy='17' r='2'/></svg>"
+        type="image/svg+xml">
     <style>
         :root {
-            --bg-color: #121212;
-            --panel-bg: #1e1e1e;
-            --text-main: #ffffff;
-            --text-muted: #a0a0a0;
-            --empty-color: #28a745;
-            --normal-color: #ffc107;
-            --violation-color: #dc3545;
-            --border-radius: 12px;
+            --bg-base: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --panel-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --color-live: #10b981;
+            --color-primary: #3b82f6;
+            --color-danger: #ef4444;
+            --color-warning: #f59e0b;
+            --border-radius-md: 12px;
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-base);
+            background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, var(--bg-base) 70%);
             color: var(--text-main);
             margin: 0;
-            padding: 20px;
+            padding: 24px 32px;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            box-sizing: border-box;
+            background-attachment: fixed;
         }
 
-        .header {
-            width: 100%;
-            max-width: 1200px;
+        /* --- Header --- */
+        .header-section {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--panel-border);
         }
 
-        .header h1 {
+        .header-title {
+            font-size: 28px;
             margin: 0;
-            font-size: 24px;
             font-weight: 600;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .status-badge {
-            background-color: var(--empty-color);
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .dashboard {
+        .header-actions {
             display: flex;
-            width: 100%;
-            max-width: 1200px;
-            gap: 20px;
-            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
         }
 
-        .video-section {
-            flex: 2;
-            min-width: 600px;
+        .btn {
             background: var(--panel-bg);
-            border-radius: var(--border-radius);
-            padding: 15px;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            border-color: rgba(59, 130, 246, 0.5);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-danger {
+            background: var(--color-danger);
+            border-color: rgba(239, 68, 68, 0.5);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        /* --- Dashboard Grid --- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 24px;
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .camera-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--border-radius-md);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            transition: var(--transition-smooth);
         }
 
-        .video-container {
+        .camera-card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .camera-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .camera-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--color-live);
+            box-shadow: 0 0 8px var(--color-live);
+        }
+
+        .status-dot.offline {
+            background-color: var(--color-danger);
+            box-shadow: 0 0 8px var(--color-danger);
+        }
+
+        .video-wrapper {
             width: 100%;
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
             aspect-ratio: 16/9;
+            background: #000;
+            position: relative;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .video-container img {
+        .video-wrapper img {
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
-        .sidebar {
+        .card-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .stat-box {
             flex: 1;
-            min-width: 300px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 16px 12px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .stat-subtext {
+            font-size: 11px;
+            color: #64748b;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 0;
+            border-radius: 4px;
+            margin-top: 4px;
+        }
+
+        .val-empty {
+            color: var(--color-live);
+        }
+
+        .val-normal {
+            color: var(--color-primary);
+        }
+
+        .val-violation {
+            color: var(--color-danger);
+        }
+
+        /* --- Modals --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: var(--bg-base);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 950px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: white;
+        }
+
+        .modal-body {
+            padding: 24px;
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
+        /* --- Table in Modal --- */
+        .table-wrapper {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            overflow: hidden;
         }
 
-        .stat-card {
-            background: var(--panel-bg);
-            padding: 20px;
-            border-radius: var(--border-radius);
-            text-align: center;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            transition: transform 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .stat-title {
+        table {
+            width: 100%;
+            border-collapse: collapse;
             font-size: 14px;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.3);
+            font-weight: 600;
             color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 10px;
         }
 
-        .stat-value {
-            font-size: 36px;
-            font-weight: bold;
+        tr:last-child td {
+            border-bottom: none;
         }
 
-        .stat-empty {
-            border-bottom: 4px solid var(--empty-color);
+        .action-btns {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
-        .stat-empty .stat-value {
-            color: var(--empty-color);
-        }
-
-        .stat-normal {
-            border-bottom: 4px solid var(--normal-color);
-        }
-
-        .stat-normal .stat-value {
-            color: var(--normal-color);
-        }
-
-        .stat-violation {
-            border-bottom: 4px solid var(--violation-color);
-        }
-
-        .stat-violation .stat-value {
-            color: var(--violation-color);
-        }
-
-        .logs-section {
-            background: var(--panel-bg);
-            border-radius: var(--border-radius);
-            padding: 20px;
-            flex-grow: 1;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        /* --- Form Elements --- */
+        .form-group {
             display: flex;
             flex-direction: column;
-            max-height: 400px;
+            gap: 8px;
         }
 
-        .logs-section h2 {
-            margin-top: 0;
-            font-size: 18px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 10px;
+        .form-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
         }
 
-        .logs-container {
-            overflow-y: auto;
-            flex-grow: 1;
-            padding-right: 5px;
-        }
-
-        /* Custom Scrollbar */
-        .logs-container::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .logs-container::-webkit-scrollbar-track {
-            background: #2a2a2a;
-            border-radius: 4px;
-        }
-
-        .logs-container::-webkit-scrollbar-thumb {
-            background: #555;
-            border-radius: 4px;
-        }
-
-        .log-item {
-            background: #2a2a2a;
+        .form-control {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
             padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 10px;
+            color: white;
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        /* --- Full Screen Canvas Overlay --- */
+        .fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-base);
+            z-index: 3000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .fullscreen-overlay.active {
+            display: flex;
+        }
+
+        .fs-header {
+            padding: 16px 24px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--panel-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-left: 4px solid var(--violation-color);
-            animation: slideIn 0.3s ease-out forwards;
         }
 
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+        .fs-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            background: #000;
         }
 
-        .log-time {
-            font-size: 12px;
+        .canvas-area {
+            flex: 1;
+            position: relative;
+            cursor: crosshair;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #drawCanvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .tools-panel {
+            width: 320px;
+            background: var(--panel-bg);
+            border-left: 1px solid var(--panel-border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            backdrop-filter: blur(20px);
+            overflow-y: auto;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-toggle {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--panel-border);
             color: var(--text-muted);
         }
 
-        .log-content {
-            flex-grow: 1;
-            margin-left: 15px;
-            font-size: 14px;
+        .btn-toggle.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.3);
         }
 
-        .log-content strong {
-            color: #ff6b6b;
+        .slot-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 13px;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border: 1px solid var(--panel-border);
+            flex: 1;
+            overflow-y: auto;
         }
 
-        /* Modal Styles */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 1000; opacity: 0; pointer-events: none;
-            transition: opacity 0.2s;
+        .slot-list li {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--panel-border);
+            cursor: pointer;
         }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-content {
-            background: #1e1e1e; border: 1px solid #333; border-radius: 12px;
-            width: 400px; max-width: 90%; padding: 24px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            transform: translateY(20px); transition: transform 0.2s;
+
+        .slot-list li:hover {
+            background: rgba(255, 255, 255, 0.05);
         }
-        .modal-overlay.active .modal-content { transform: translateY(0); }
-        .modal-header {
-            font-size: 18px; font-weight: bold; margin-bottom: 16px;
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid #333; padding-bottom: 12px;
+
+        .slot-list li.selected {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            font-weight: bold;
         }
-        .modal-close { background: none; border: none; color: #aaa; font-size: 20px; cursor: pointer; }
-        .modal-close:hover { color: white; }
-        .cam-select-list { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; }
-        .cam-select-btn {
-            background: #2a2a2a; border: 1px solid #444; padding: 12px 16px;
-            border-radius: 8px; color: white; font-size: 15px; text-align: left;
-            cursor: pointer; transition: background 0.15s, border-color 0.15s;
-            display: flex; align-items: center; gap: 10px;
+
+        /* --- Toggle Switch --- */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
         }
-        .cam-select-btn:hover { background: #333; border-color: #4caff0; }
-        .cam-select-btn .badge {
-            background: #4caff0; color: white; font-size: 12px;
-            font-weight: bold; padding: 2px 6px; border-radius: 4px;
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: .2s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .2s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--color-live);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(16px);
+        }
+
+        /* --- Status Badges --- */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-online {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-offline {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .badge-online .badge-dot {
+            background-color: #10b981;
+        }
+
+        .badge-offline .badge-dot {
+            background-color: #ef4444;
+        }
+
+        /* --- Preview / Loading Box --- */
+        .preview-box {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: var(--border-radius-md);
+            overflow: hidden;
+            margin-top: 12px;
+            border: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: var(--color-primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .retry-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        /* Template List Items */
+        .template-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .template-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: var(--color-primary);
         }
     </style>
 </head>
 
 <body>
 
-    <div class="header">
-        <h1>Smart Parking - Control Center</h1>
-        <div style="display:flex; gap:10px; align-items:center;">
-            <button onclick="showCameraModal()"
-                style="background:#4caff0; color:white; padding:7px 14px; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:bold;">Parking
-                Setup</button>
-            <a href="/setup_online"
-                style="background:#ffc107; color:#333; padding:7px 14px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:bold;">Camera
-                Setup</a>
-            <a href="/" style="color:#aaa; text-decoration:none; font-size:13px;">Home</a>
-            <div class="status-badge" id="conn-status">Live</div>
+    <div class="header-section">
+        <h1 class="header-title">Live Dashboard</h1>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="openManagerModal()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                    </path>
+                </svg>
+                Manage Cameras
+            </button>
         </div>
     </div>
 
-    <div class="dashboard" id="cameras-container">
-        <!-- Dynamic Camera Streams will be injected here -->
-        <div style="color: #aaa; padding: 20px; width: 100%; text-align: center;">Loading cameras...</div>
+    <div class="dashboard-grid" id="cameras-container">
+        <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">
+            Loading cameras...
+        </div>
     </div>
 
-    <!-- Camera Selection Modal -->
-    <div class="modal-overlay" id="cameraModal">
+    <div class="modal-overlay" id="managerModal">
         <div class="modal-content">
             <div class="modal-header">
-                <div>เลือกกล้อง / Select Camera</div>
-                <button class="modal-close" onclick="hideCameraModal()">&times;</button>
+                <h2 class="modal-title">Camera Management</h2>
+                <button class="modal-close" onclick="closeModal('managerModal')">&times;</button>
             </div>
-            <div class="cam-select-list" id="modalCamList">
-                <div style="text-align:center; color:#888; padding: 20px;">Loading cameras...</div>
+            <div class="modal-body">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-muted); font-size: 14px;">Select a camera to setup properties or draw
+                        parking slots.</span>
+                    <button class="btn btn-primary" onclick="openSetupModal()">+ Add New Camera</button>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="8%">ID</th>
+                                <th width="20%">Name</th>
+                                <th width="12%">Status</th>
+                                <th width="12%">Dash</th>
+                                <th width="48%">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cameraTableBody">
+                            <tr>
+                                <td colspan="5" style="text-align:center;">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="setupModal">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-header">
+                <h2 class="modal-title" id="setupModalTitle">Setup Camera</h2>
+                <button class="modal-close" onclick="closeSetupModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="setupForm">
+                    <input type="hidden" id="setupIdInput" value="">
+
+                    <div class="form-group">
+                        <label>Camera Name</label>
+                        <input type="text" id="setupNameInput" class="form-control" required placeholder="Main Gate">
+                    </div>
+
+                    <div class="form-group">
+                        <label>IP Address</label>
+                        <input type="text" id="setupIpInput" class="form-control" required placeholder="192.168.1.100">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Port</label>
+                        <input type="text" id="setupPortInput" class="form-control" required placeholder="8080">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Stream Path</label>
+                        <input type="text" id="setupPathInput" class="form-control" placeholder="/video" value="/video">
+                        <span style="font-size: 11px; color: var(--text-muted);">E.g. /video for IP Webcam</span>
+                    </div>
+
+                    <div id="setupPreviewArea" style="display: none; flex-direction: column; margin-top: 15px;">
+                        <span style="font-weight: bold; margin-bottom: 5px;">Live Validation:</span>
+                        <div class="preview-box">
+                            <div id="setupSpinner" class="spinner"></div>
+                            <img id="setupPreviewImg" src="" alt="Live Stream" style="display: none;"
+                                onload="onPreviewLoad()">
+                            <div id="setupRetry" class="retry-overlay" style="display: none;">
+                                <div style="color: #ff6b6b; font-weight:bold;">Connection Failed</div>
+                                <button type="button" class="btn btn-primary" onclick="triggerConnect()"
+                                    style="font-size: 13px; padding: 6px 12px;">Retry Connection</button>
+                            </div>
+                        </div>
+                        <button type="button" id="btnFinishSetup" class="btn btn-primary"
+                            style="margin-top: 15px; display: none; background: #10b981; justify-content: center;"
+                            onclick="finishSetupAndGoHome()">Finish & Go to Dashboard</button>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="button" class="btn btn-primary" style="flex: 1; justify-content: center;"
+                            onclick="saveCameraConfig()">Save & Connect</button>
+                    </div>
+                </form>
+
+                <hr style="border-color: var(--panel-border); margin: 8px 0;">
+
+                <div style="text-align: center;">
+                    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">ADVANCED TEMPLATE</p>
+
+                    <button type="button" id="btnServerTemplate" class="btn" disabled
+                        style="width: 100%; justify-content: center; opacity: 0.5; cursor: not-allowed; transition: var(--transition-smooth);"
+                        onclick="openTemplateModal('setup')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" style="margin-right:4px;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        Load Template from Server
+                    </button>
+
+                    <p id="uploadHint"
+                        style="font-size: 11px; color: var(--color-warning); margin-top: 8px; font-weight: 500;">
+                        * Please connect camera successfully before loading template.
+                    </p>
+
+                    <div style="text-align:center; margin-top: 8px; display: none;" id="localUploadBox">
+                        <a href="#" onclick="document.getElementById('fileInput').click(); return false;"
+                            style="font-size: 11px; color: var(--text-muted); text-decoration: underline;">Or upload
+                            local .xml file</a>
+                        <input type="file" id="fileInput" accept=".xml" style="display: none;"
+                            onchange="uploadXML(event)">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="fullscreen-overlay" id="parkingOverlay">
+        <div class="fs-header">
+            <h2 class="modal-title" style="font-size: 18px;" id="parkingOverlayTitle">Parking Slot Setup</h2>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn-primary" onclick="saveTemplate()">Save Template</button>
+                <button class="btn" onclick="closeParkingOverlay()">Close</button>
+            </div>
+        </div>
+
+        <div class="fs-body">
+            <div class="canvas-area" id="canvas-container">
+                <canvas id="drawCanvas"></canvas>
+                <div id="canvas-status"
+                    style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-family: monospace;">
+                    Waiting for camera frame...
+                </div>
+            </div>
+
+            <div class="tools-panel">
+                <div class="form-group">
+                    <label>Live View</label>
+                    <button class="btn" style="justify-content: center;" onclick="loadLiveFrame()">Load Live
+                        Frame</button>
+                </div>
+
+                <div class="form-group" style="margin-top: 8px;">
+                    <label>Template Management</label>
+                    <button class="btn"
+                        style="justify-content: center; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border-color: rgba(59, 130, 246, 0.5);"
+                        onclick="openTemplateModal('draw')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" style="margin-right:4px;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        Load Server Template
+                    </button>
+                    <div style="text-align:center; margin-top: 6px;">
+                        <a href="#" onclick="document.getElementById('canvasFileInput').click(); return false;"
+                            style="font-size: 11px; color: var(--text-muted); text-decoration: underline;">Or upload
+                            local .xml file</a>
+                        <input type="file" id="canvasFileInput" accept=".xml" style="display: none;"
+                            onchange="loadTemplateToCanvas(event)">
+                    </div>
+                </div>
+
+                <hr style="border-color: var(--panel-border);">
+
+                <div class="form-group">
+                    <label>Slot Type</label>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-toggle active" id="btnTypeCar" onclick="setSlotType('Car')">Car</button>
+                        <button class="btn btn-toggle" id="btnTypeMoto"
+                            onclick="setSlotType('Motorcycle')">Motorcycle</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Drawing Controls</label>
+                    <button class="btn" onclick="finishSlot()" id="btnFinishSlot" disabled>Complete Slot (Right
+                        Click)</button>
+                    <button class="btn btn-danger" onclick="clearAll()" id="btnClearAll" disabled>Clear All
+                        Slots</button>
+                    <p style="font-size: 11px; color: var(--text-muted); margin: 4px 0 0 0;">Left click to plot points.
+                        Need min 3 points.</p>
+                </div>
+
+                <hr style="border-color: var(--panel-border);">
+
+                <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
+                    <label>Slots In Template (<span id="slotCountOverview">0</span>)</label>
+                    <ul id="slotList" class="slot-list"></ul>
+                    <button class="btn btn-danger" style="margin-top: 8px;" id="btnDeleteSlot"
+                        onclick="deleteSelectedSlot()" disabled>Delete Selected</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="templateModal" style="z-index: 4000;">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Select Server Template</h2>
+                <button class="modal-close" onclick="closeTemplateModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding-top: 10px;">
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
+                    Select a template previously saved on this server to load it onto the current camera.
+                </p>
+                <div id="templateList"
+                    style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         let camerasData = [];
-        let pollingInterval = null;
+        let dashboardPollInterval = null;
+        let hiddenCameras = JSON.parse(localStorage.getItem('hidden_cameras') || '[]');
+        let cameraStatuses = {};
 
-        async function initCameras() {
+        // ==========================================
+        // 1. Dashboard Logic
+        // ==========================================
+        async function fetchCameras() {
             try {
-                const response = await fetch('/api/cameras?t=' + new Date().getTime());
+                const response = await fetch('/api/cameras?t=' + Date.now());
                 if (!response.ok) throw new Error('Network error');
                 const data = await response.json();
 
-                const modalList = document.getElementById('modalCamList');
-                if (modalList) modalList.innerHTML = '';
-
-                if (Array.isArray(data) && data.length > 0) {
-                    camerasData = data;
-                    renderCameraGrid();
-
-                    if (modalList) {
-                        data.forEach(cam => {
-                            const btn = document.createElement('button');
-                            btn.className = 'cam-select-btn';
-                            btn.innerHTML = `<span class="badge">#${cam.id}</span> ${cam.name || 'Camera ' + cam.id}`;
-                            btn.onclick = () => { window.location.href = '/setup_parking?id=' + cam.id; };
-                            modalList.appendChild(btn);
-                        });
+                data.forEach(cam => {
+                    if (!(cam.id in cameraStatuses)) {
+                        cameraStatuses[cam.id] = false;
                     }
-                    if (pollingInterval) clearInterval(pollingInterval);
-                    pollingInterval = setInterval(fetchAllStats, 1000);
-                    fetchAllStats();
-                } else {
-                    document.getElementById('cameras-container').innerHTML = `
-                        <div style="color: #aaa; padding: 20px; width: 100%; text-align: center;">
-                            No cameras configured. Go to <a href="/setup_online" style="color:#ffc107;">Setup</a> to add a camera.
-                        </div>
-                    `;
-                    if (modalList) modalList.innerHTML = '<div style="text-align:center; color:#888; padding:20px;">No cameras available.</div>';
+                });
+
+                camerasData = Array.isArray(data) ? data : [];
+                renderDashboardGrid();
+                renderManagerTable();
+
+                if (dashboardPollInterval) clearInterval(dashboardPollInterval);
+                if (camerasData.length > 0) {
+                    dashboardPollInterval = setInterval(fetchStatsLog, 1000);
+                    fetchStatsLog();
                 }
             } catch (err) {
                 console.error("Failed to load cameras", err);
             }
         }
 
-        function showCameraModal() {
-            document.getElementById('cameraModal').classList.add('active');
-        }
-
-        function hideCameraModal() {
-            document.getElementById('cameraModal').classList.remove('active');
-        }
-
-        function renderCameraGrid() {
+        function renderDashboardGrid() {
             const container = document.getElementById('cameras-container');
-            container.innerHTML = ''; // Clear
+            container.innerHTML = '';
 
-            camerasData.forEach(cam => {
-                const camId = cam.id;
-                const camName = cam.name || `Camera ${camId}`;
+            const visibleCameras = camerasData.filter(cam => !hiddenCameras.includes(cam.id));
+
+            if (camerasData.length === 0) {
+                container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">No cameras configured. Click "Manage Cameras" to add one.</div>`;
+                return;
+            }
+
+            if (visibleCameras.length === 0) {
+                container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">All cameras are hidden. Open "Manage Cameras" to show them.</div>`;
+                return;
+            }
+
+            visibleCameras.forEach(cam => {
+                const camName = cam.name || `Camera ${cam.id}`;
+                const isOffline = cameraStatuses[cam.id] !== true;
 
                 const html = `
-                <div class="video-section" id="cam-section-${camId}" style="flex: 1; min-width: 45%; max-width: 100%;">
-                    <h3 style="margin-top:0; margin-bottom:10px; border-bottom: 1px solid #333; padding-bottom: 5px;">
-                        <span style="color:#28a745" id="cam-status-${camId}">●</span> ${camName} (ID: ${camId})
-                    </h3>
-                    
-                    <div class="video-container" style="aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden;">
-                        <img src="/${camId}/video" alt="MJPEG Stream ${camId}" 
-                             id="streamImage-${camId}" 
-                             style="width: 100%; height: 100%; object-fit: contain;"
-                             onerror="handleStreamError(${camId})">
-                    </div>
-                    
-                    <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <!-- Stats Mini Grid -->
-                        <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                            <div class="stat-card stat-empty" style="padding: 10px;">
-                                <div class="stat-title" style="font-size:10px;">Empty</div>
-                                <div class="stat-value" id="val-empty-${camId}" style="font-size:20px;">0</div>
-                            </div>
-                            <div class="stat-card stat-normal" style="padding: 10px;">
-                                <div class="stat-title" style="font-size:10px;">Normal</div>
-                                <div class="stat-value" id="val-normal-${camId}" style="font-size:20px;">0</div>
-                            </div>
-                            <div class="stat-card stat-violation" style="padding: 10px;">
-                                <div class="stat-title" style="font-size:10px;">Violation</div>
-                                <div class="stat-value" id="val-violation-${camId}" style="font-size:20px;">0</div>
-                            </div>
+                <div class="camera-card" id="card-${cam.id}">
+                    <div class="camera-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="status-dot ${isOffline ? 'offline' : ''}" id="dot-${cam.id}"></div>
+                            <span class="camera-title">${camName} 
+                                <span id="dash-zone-${cam.id}" style="font-size: 13px; color: var(--text-muted); font-weight: normal; margin-left: 8px;"></span>
+                            </span>
                         </div>
-                        
-                        <!-- Logs Mini Panel -->
-                        <div class="logs-section" style="flex: 1; padding: 10px; margin-top: 0; max-height: 120px;">
-                            <div class="logs-container" id="logs-list-${camId}">
-                                <div style="font-size:12px; color:#aaa;">Waiting for logs...</div>
+                        <div style="font-size: 12px; color: var(--text-muted); font-family: monospace;">ID: ${cam.id}</div>
+                    </div>
+                    <div class="video-wrapper">
+                        <img src="/${cam.id}/video" alt="Stream ${cam.id}" id="stream-${cam.id}" 
+                             onload="handleStreamLoad(${cam.id})" onerror="handleStreamError(${cam.id})">
+                    </div>
+                    <div class="card-body">
+                        <div class="stats-row">
+                            <div class="stat-box">
+                                <span class="stat-value val-empty" id="dash-empty-${cam.id}">0</span>
+                                <span class="stat-label">Empty</span>
+                                <div class="stat-subtext" id="dash-empty-sub-${cam.id}">Car: 0 | Moto: 0</div>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-value val-normal" id="dash-normal-${cam.id}">0</span>
+                                <span class="stat-label">Normal</span>
+                                <div class="stat-subtext" id="dash-normal-sub-${cam.id}">Car: 0 | Moto: 0</div>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-value val-violation" id="dash-violation-${cam.id}">0</span>
+                                <span class="stat-label">Violation</span>
+                                <div class="stat-subtext" style="opacity: 0;">-</div> 
                             </div>
                         </div>
                     </div>
-                </div>
-                `;
-                container.innerHTML += html;
+                </div>`;
+                container.insertAdjacentHTML('beforeend', html);
             });
+        }
+
+        function handleStreamLoad(camId) {
+            updateCameraStatus(camId, true);
         }
 
         function handleStreamError(camId) {
-            const statusIndicator = document.getElementById(`cam-status-${camId}`);
-            if (statusIndicator) {
-                statusIndicator.style.color = 'var(--violation-color)';
+            updateCameraStatus(camId, false);
+        }
+
+        async function fetchStatsLog() {
+            try {
+                const res = await fetch('/api/parking_areas?t=' + Date.now());
+                if (!res.ok) return;
+
+                const data = await res.json();
+                const areasList = Array.isArray(data) ? data : [data];
+
+                // สร้าง Object เก็บเฉพาะค่า "ล่าสุด" ของแต่ละกล้อง
+                const latestLogs = {};
+
+                areasList.forEach(area => {
+                    let camId = area.camera_id;
+                    if (typeof camId === 'string' && camId.startsWith('camera_')) {
+                        camId = parseInt(camId.replace('camera_', ''));
+                    }
+
+                    if (!latestLogs[camId]) {
+                        latestLogs[camId] = area;
+                    }
+                });
+
+                Object.keys(latestLogs).forEach(camIdStr => {
+                    const camId = parseInt(camIdStr);
+                    if (hiddenCameras.includes(camId)) return;
+
+                    const area = latestLogs[camId];
+
+                    const emptyCar = area.available_car_slots || 0;
+                    const emptyMoto = area.available_motorcycle_slots || 0;
+                    const totalEmpty = emptyCar + emptyMoto;
+
+                    const normalCar = area.occupied_car_slots || 0;
+                    const normalMoto = area.occupied_motorcycle_slots || 0;
+                    const totalNormal = normalCar + normalMoto;
+
+                    const violation = area.violation_slots || 0;
+
+                    const elEmpty = document.getElementById(`dash-empty-${camId}`);
+                    const elEmptySub = document.getElementById(`dash-empty-sub-${camId}`);
+                    if (elEmpty) elEmpty.innerText = totalEmpty;
+                    if (elEmptySub) elEmptySub.innerText = `Car: ${emptyCar} | Moto: ${emptyMoto}`;
+
+                    const elNormal = document.getElementById(`dash-normal-${camId}`);
+                    const elNormalSub = document.getElementById(`dash-normal-sub-${camId}`);
+                    if (elNormal) elNormal.innerText = totalNormal;
+                    if (elNormalSub) elNormalSub.innerText = `Car: ${normalCar} | Moto: ${normalMoto}`;
+
+                    const elViolation = document.getElementById(`dash-violation-${camId}`);
+                    if (elViolation) elViolation.innerText = violation;
+
+                    const elZone = document.getElementById(`dash-zone-${camId}`);
+                    if (elZone && area.name) {
+                        elZone.innerText = `[${area.name} - Total: ${area.total_slots || 0}]`;
+                    }
+                });
+
+            } catch (e) {
+                // Ignore connection errors
             }
         }
 
-        async function fetchAllStats() {
-            camerasData.forEach(async (cam) => {
-                try {
-                    const response = await fetch(`/api/${cam.id}/stats?t=` + new Date().getTime());
-                    if (!response.ok) return;
+        function updateCameraStatus(camId, isOnline) {
+            if (cameraStatuses[camId] !== isOnline) {
+                cameraStatuses[camId] = isOnline;
 
-                    const data = await response.json();
-
-                    document.getElementById(`val-empty-${cam.id}`).innerText = data.empty || 0;
-                    document.getElementById(`val-normal-${cam.id}`).innerText = data.normal || 0;
-                    document.getElementById(`val-violation-${cam.id}`).innerText = data.violation || 0;
-
-                    const logsList = document.getElementById(`logs-list-${cam.id}`);
-                    if (data.logs && data.logs.length > 0) {
-                        let html = '';
-                        data.logs.slice().reverse().forEach(log => {
-                            html += `
-                                <div style="font-size:12px; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid #333;">
-                                    <span style="color:#aaa;">${log.time}</span> 
-                                    <span style="color:#ff6b6b;">#${log.id}</span> - ${log.type}
-                                </div>
-                            `;
-                        });
-                        logsList.innerHTML = html;
-                    } else {
-                        logsList.innerHTML = `<div style="font-size:12px; color:#28a745;">No active violations. All clear!</div>`;
-                    }
-                } catch (error) {
-                    // console.error(\`Stats error for cam \${cam.id}:\`, error);
+                const dot = document.getElementById(`dot-${camId}`);
+                if (dot) {
+                    if (isOnline) dot.classList.remove('offline');
+                    else dot.classList.add('offline');
                 }
+
+                const badge = document.getElementById(`status-badge-${camId}`);
+                if (badge) {
+                    if (isOnline) {
+                        badge.className = 'badge badge-online';
+                        badge.innerHTML = '<div class="badge-dot"></div>Online';
+                    } else {
+                        badge.className = 'badge badge-offline';
+                        badge.innerHTML = '<div class="badge-dot"></div>Offline';
+                    }
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchCameras);
+
+        // ==========================================
+        // 2. Manager Modal Logic
+        // ==========================================
+        function openManagerModal() {
+            document.getElementById('managerModal').classList.add('active');
+            renderManagerTable();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        function copyCameraUrl(id) {
+            const url = window.location.protocol + '//' + window.location.host + '/' + id + '/video';
+
+            const tempInput = document.createElement("input");
+            tempInput.style.position = "absolute";
+            tempInput.style.left = "-9999px";
+            tempInput.value = url;
+            document.body.appendChild(tempInput);
+
+            tempInput.select();
+            tempInput.setSelectionRange(0, 99999);
+
+            try {
+                document.execCommand("copy");
+                const btn = document.getElementById(`btn-copy-${id}`);
+                if (btn) {
+                    const originalHtml = btn.innerHTML;
+                    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!`;
+                    btn.style.color = '#10b981';
+                    btn.style.borderColor = '#10b981';
+                    btn.style.background = 'rgba(16, 185, 129, 0.1)';
+
+                    setTimeout(() => {
+                        btn.innerHTML = originalHtml;
+                        btn.style.color = '';
+                        btn.style.borderColor = '';
+                        btn.style.background = 'rgba(255,255,255,0.05)';
+                    }, 2000);
+                }
+            } catch (err) {
+                alert("เบราว์เซอร์ไม่อนุญาตให้ก๊อปปี้ กรุณาก๊อปปี้ลิงก์นี้แทน: " + url);
+            }
+            document.body.removeChild(tempInput);
+        }
+
+        function renderManagerTable() {
+            const tbody = document.getElementById('cameraTableBody');
+            tbody.innerHTML = '';
+
+            if (camerasData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">No cameras. Add one to begin.</td></tr>';
+                return;
+            }
+
+            camerasData.forEach(cam => {
+                let displayUrl = cam.rtspUrl || 'Not configured';
+                if (displayUrl.includes('|')) {
+                    const p = displayUrl.split('|');
+                    displayUrl = `http://${p[0]}:${p[1]}${p[2]}`;
+                }
+
+                const isHidden = hiddenCameras.includes(cam.id);
+                const isOnline = cameraStatuses[cam.id] === true;
+
+                const statusHtml = isOnline
+                    ? `<div class="badge badge-online" id="status-badge-${cam.id}"><div class="badge-dot"></div>Online</div>`
+                    : `<div class="badge badge-offline" id="status-badge-${cam.id}"><div class="badge-dot"></div>Offline</div>`;
+
+                tbody.insertAdjacentHTML('beforeend', `
+                    <tr>
+                        <td><span style="font-family: monospace; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px;">#${cam.id}</span></td>
+                        <td>
+                            <div style="font-weight: 500;">${cam.name || 'Unnamed Camera'}</div>
+                            <div style="font-size: 11px; color: var(--text-muted); font-family: monospace; margin-top: 4px;" title="${displayUrl}">${displayUrl.length > 25 ? displayUrl.substring(0, 25) + '...' : displayUrl}</div>
+                        </td>
+                        <td>${statusHtml}</td>
+                        <td>
+                            <label class="switch">
+                                <input type="checkbox" ${!isHidden ? 'checked' : ''} onchange="toggleCameraVisibility(${cam.id}, this)">
+                                <span class="slider"></span>
+                            </label>
+                        </td>
+                        <td class="action-btns">
+                            <button class="btn" id="btn-copy-${cam.id}" style="padding: 6px 12px; font-size: 12px; white-space: nowrap; background: rgba(255,255,255,0.05);" onclick="copyCameraUrl(${cam.id})">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                Copy URL
+                            </button>
+                            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; white-space: nowrap;" onclick="openParkingOverlay(${cam.id})">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                Draw
+                            </button>
+                            <button class="btn" style="padding: 6px 12px; font-size: 12px; white-space: nowrap;" onclick="editCamera(${cam.id})">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                Edit
+                            </button>
+                            <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; white-space: nowrap;" onclick="deleteCamera(${cam.id})">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                `);
             });
         }
 
-        // Initialize multiple cameras layout
-        document.addEventListener('DOMContentLoaded', initCameras);
+        function deleteCamera(id) {
+            if (!confirm(`Delete Camera #${id}?`)) return;
+            const newData = camerasData.filter(c => c.id !== id);
+            fetch('/api/cameras', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newData)
+            }).then(() => fetchCameras());
+        }
+
+        function toggleCameraVisibility(camId, checkbox) {
+            if (checkbox.checked) {
+                hiddenCameras = hiddenCameras.filter(id => id !== camId);
+            } else {
+                if (!hiddenCameras.includes(camId)) hiddenCameras.push(camId);
+            }
+            localStorage.setItem('hidden_cameras', JSON.stringify(hiddenCameras));
+            renderDashboardGrid();
+        }
+
+        // ==========================================
+        // 3. Setup Modal Logic
+        // ==========================================
+        function openSetupModal(id = null) {
+            closeModal('managerModal');
+            document.getElementById('setupModal').classList.add('active');
+
+            const form = document.getElementById('setupForm');
+            form.reset();
+
+            document.getElementById('setupPreviewArea').style.display = 'none';
+            document.getElementById('setupPreviewImg').src = '';
+            document.getElementById('setupPreviewImg').style.display = 'none';
+            document.getElementById('setupSpinner').style.display = 'block';
+            document.getElementById('setupRetry').style.display = 'none';
+            document.getElementById('btnFinishSetup').style.display = 'none';
+
+            const btnUpload = document.getElementById('btnServerTemplate');
+            btnUpload.disabled = true;
+            btnUpload.style.opacity = '0.5';
+            btnUpload.style.cursor = 'not-allowed';
+            btnUpload.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Load Template from Server`;
+            btnUpload.style.background = 'rgba(255,255,255,0.1)';
+            btnUpload.style.color = '#fff';
+            btnUpload.style.borderColor = '#444';
+
+            document.getElementById('uploadHint').style.display = 'block';
+            document.getElementById('localUploadBox').style.display = 'none';
+
+            if (id) {
+                document.getElementById('setupModalTitle').innerText = `Edit Camera #${id}`;
+                document.getElementById('setupIdInput').value = id;
+                const cam = camerasData.find(c => c.id === id);
+                if (cam) {
+                    document.getElementById('setupNameInput').value = cam.name || '';
+                    if (cam.rtspUrl && cam.rtspUrl.includes('|')) {
+                        const parts = cam.rtspUrl.split('|');
+                        document.getElementById('setupIpInput').value = parts[0] || '';
+                        document.getElementById('setupPortInput').value = parts[1] || '';
+                        document.getElementById('setupPathInput').value = parts[2] || '';
+                    }
+                }
+            } else {
+                document.getElementById('setupModalTitle').innerText = 'Add New Camera';
+                const nextId = camerasData.length > 0 ? Math.max(...camerasData.map(c => c.id)) + 1 : 1;
+                document.getElementById('setupIdInput').value = nextId;
+            }
+        }
+
+        function editCamera(id) {
+            openSetupModal(id);
+        }
+
+        function closeSetupModal() {
+            closeModal('setupModal');
+            document.getElementById('setupPreviewImg').src = '';
+            openManagerModal();
+        }
+
+        function finishSetupAndGoHome() {
+            closeModal('setupModal');
+            closeModal('managerModal');
+            document.getElementById('setupPreviewImg').src = '';
+            fetchCameras();
+        }
+
+        function saveCameraConfig() {
+            const form = document.getElementById('setupForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            triggerConnect();
+        }
+
+        let connectRetryCount = 0;
+        const MAX_CONNECT_RETRIES = 10;
+        let connectRetryTimer = null;
+        let connectingCamId = null;
+
+        function triggerConnect() {
+            const id = parseInt(document.getElementById('setupIdInput').value);
+            const name = document.getElementById('setupNameInput').value.trim();
+            const ip = document.getElementById('setupIpInput').value.trim();
+            const port = document.getElementById('setupPortInput').value.trim();
+            const path = document.getElementById('setupPathInput').value.trim();
+            const rtspUrl = `${ip}|${port}|${path}`;
+
+            connectRetryCount = 0;
+            connectingCamId = id;
+            if (connectRetryTimer) { clearInterval(connectRetryTimer); connectRetryTimer = null; }
+
+            let newData = [...camerasData];
+            const idx = newData.findIndex(c => c.id === id);
+            if (idx >= 0) {
+                newData[idx].name = name;
+                newData[idx].rtspUrl = rtspUrl;
+            } else {
+                newData.push({ id, name, rtspUrl });
+            }
+
+            document.getElementById('setupPreviewArea').style.display = 'flex';
+            document.getElementById('setupSpinner').style.display = 'block';
+            document.getElementById('setupRetry').style.display = 'none';
+            document.getElementById('btnFinishSetup').style.display = 'none';
+            const img = document.getElementById('setupPreviewImg');
+            img.style.display = 'none';
+            img.src = '';
+
+            fetch('/api/cameras', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newData)
+            }).then(() => {
+                fetch(`/api/${id}/connect_online`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip, port, path })
+                }).then(() => {
+                    connectRetryTimer = setInterval(() => {
+                        pollCameraStatus(id);
+                    }, 500);
+                }).catch(() => {
+                    onPreviewFinalError();
+                });
+            });
+        }
+
+        async function pollCameraStatus(id) {
+            connectRetryCount++;
+            try {
+                const res = await fetch(`/api/${id}/raw_frame?t=` + Date.now());
+                if (res.ok) {
+                    onPreviewSuccess(id);
+                    return;
+                }
+            } catch (e) { }
+
+            if (connectRetryCount >= MAX_CONNECT_RETRIES) {
+                onPreviewFinalError();
+            }
+        }
+
+        function onPreviewSuccess(id) {
+            if (connectRetryTimer) { clearInterval(connectRetryTimer); connectRetryTimer = null; }
+            const img = document.getElementById('setupPreviewImg');
+            img.src = `/${id}/video?t=` + Date.now();
+            img.style.display = 'block';
+
+            document.getElementById('setupSpinner').style.display = 'none';
+            document.getElementById('setupRetry').style.display = 'none';
+            document.getElementById('btnFinishSetup').style.display = 'flex';
+            fetchCameras();
+
+            const btnUpload = document.getElementById('btnServerTemplate');
+            btnUpload.disabled = false;
+            btnUpload.style.opacity = '1';
+            btnUpload.style.cursor = 'pointer';
+            document.getElementById('uploadHint').style.display = 'none';
+            document.getElementById('localUploadBox').style.display = 'block';
+        }
+
+        function onPreviewLoad() {
+            if (!connectRetryTimer) return;
+            onPreviewSuccess(connectingCamId);
+        }
+
+        function onPreviewFinalError() {
+            if (connectRetryTimer) { clearInterval(connectRetryTimer); connectRetryTimer = null; }
+            document.getElementById('setupSpinner').style.display = 'none';
+            document.getElementById('setupPreviewImg').style.display = 'none';
+            document.getElementById('setupRetry').style.display = 'flex';
+            fetchCameras();
+        }
+
+        // ==========================================
+        // NEW: SERVER TEMPLATE MANAGEMENT LOGIC
+        // ==========================================
+        let templateTargetMode = ''; // 'draw' or 'setup'
+
+        function openTemplateModal(mode) {
+            templateTargetMode = mode;
+            const list = document.getElementById('templateList');
+            list.innerHTML = '';
+
+            // กรองเอากล้องที่มีการบันทึก Template เอาไว้ใน camerasData (ซึ่งเราจะแอบฝังไว้ตอนกด Save Template)
+            const availableTemplates = camerasData.filter(c => c.templateXml && c.templateXml.trim() !== '');
+
+            if (availableTemplates.length === 0) {
+                list.innerHTML = `
+                    <div style="text-align:center; padding: 30px 20px; color: var(--text-muted); background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 12px; opacity: 0.5;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg><br>
+                        No templates found on server.<br>Please draw and save a template first.
+                    </div>`;
+            } else {
+                availableTemplates.forEach(cam => {
+                    const btn = document.createElement('button');
+                    btn.className = 'template-item';
+                    btn.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background: rgba(59, 130, 246, 0.2); padding: 8px; border-radius: 6px; color: #60a5fa;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                            </div>
+                            <div style="text-align: left;">
+                                <div style="font-weight: 600; color: white;">Template from Camera #${cam.id}</div>
+                                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${cam.name || 'Unnamed Camera'}</div>
+                            </div>
+                        </div>
+                        <div style="color: var(--color-primary); font-size: 13px; font-weight: bold;">Load →</div>
+                    `;
+
+                    btn.onclick = () => {
+                        if (templateTargetMode === 'draw') {
+                            parseXMLTemplate(cam.templateXml);
+                        } else if (templateTargetMode === 'setup') {
+                            applyTemplateToCamera(cam.templateXml);
+                        }
+                        closeTemplateModal();
+                    };
+                    list.appendChild(btn);
+                });
+            }
+            document.getElementById('templateModal').classList.add('active');
+        }
+
+        function closeTemplateModal() {
+            document.getElementById('templateModal').classList.remove('active');
+        }
+
+        function applyTemplateToCamera(xmlContent) {
+            const camId = document.getElementById('setupIdInput').value || 1;
+            const btnUpload = document.getElementById('btnServerTemplate');
+            btnUpload.innerHTML = 'Applying...';
+            btnUpload.disabled = true;
+
+            fetch(`/api/${camId}/save_template`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/xml' },
+                body: xmlContent
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        btnUpload.innerHTML = `✓ Template Applied`;
+                        btnUpload.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+                        btnUpload.style.borderColor = '#10b981';
+                        btnUpload.style.color = '#10b981';
+                        btnUpload.disabled = false;
+                        alert('Template applied to this camera successfully!');
+                    } else {
+                        btnUpload.innerHTML = `Load Template from Server`;
+                        btnUpload.disabled = false;
+                        alert('Error applying template.');
+                    }
+                })
+                .catch(err => {
+                    btnUpload.innerHTML = `Load Template from Server`;
+                    btnUpload.disabled = false;
+                    alert('Network error while applying template: ' + err.message);
+                });
+        }
+
+        // กรณีฉุกเฉินต้องการอัพจากไฟล์ในเครื่องจริงๆ
+        function uploadXML(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                applyTemplateToCamera(event.target.result);
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        }
+
+        function loadTemplateToCanvas(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                parseXMLTemplate(event.target.result);
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        }
+
+        // ==========================================
+        // 4. Parking Canvas Logic
+        // ==========================================
+        let drawCamId = 1;
+        let bgImage = null;
+        let imageW = 0, imageH = 0;
+        let slots = [];
+        let currentPoly = [];
+        let isDrawing = false;
+        let selectedSlotIdx = -1;
+        let nextSlotId = 1;
+        let currentType = 'Car';
+
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        const drawStatus = document.getElementById('canvas-status');
+
+        function openParkingOverlay(id) {
+            closeModal('managerModal');
+            drawCamId = id;
+            document.getElementById('parkingOverlayTitle').innerText = `Parking Slot Setup — Camera #${id}`;
+            document.getElementById('parkingOverlay').classList.add('active');
+            clearAll();
+            bgImage = null;
+            redraw();
+            drawStatus.textContent = "Waiting to load live frame...";
+            loadLiveFrame();
+        }
+
+        function closeParkingOverlay() {
+            document.getElementById('parkingOverlay').classList.remove('active');
+            bgImage = null;
+        }
+
+        function setSlotType(type) {
+            currentType = type;
+            document.getElementById('btnTypeCar').classList.toggle('active', type === 'Car');
+            document.getElementById('btnTypeMoto').classList.toggle('active', type === 'Motorcycle');
+        }
+
+        function loadLiveFrame() {
+            drawStatus.textContent = "Fetching raw frame from C++ backend...";
+            const img = new Image();
+            img.onload = () => {
+                bgImage = img;
+                imageW = img.naturalWidth;
+                imageH = img.naturalHeight;
+                resizeCanvas();
+                drawStatus.textContent = "Raw frame loaded! Left-click to plot nodes. Right click to finish polygon.";
+                document.getElementById('btnFinishSlot').disabled = false;
+                document.getElementById('btnClearAll').disabled = false;
+            };
+            img.onerror = () => {
+                drawStatus.textContent = "Error: Camera feed offline.";
+            };
+            img.src = `/api/${drawCamId}/raw_frame?t=` + Date.now();
+        }
+
+        function parseXMLTemplate(xmlText) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(xmlText, 'text/xml');
+
+            const countNode = doc.querySelector('slotCount');
+            slots = [];
+
+            if (countNode) {
+                const count = parseInt(countNode.textContent);
+                for (let i = 0; i < count; i++) {
+                    const idNode = doc.querySelector(`slot_${i}_id`);
+                    const typeNode = doc.querySelector(`slot_${i}_type`);
+                    const ptsNode = doc.querySelector(`slot_${i}_points`);
+                    if (!idNode || !ptsNode) continue;
+
+                    const id = parseInt(idNode.textContent);
+                    const type = typeNode ? typeNode.textContent.replace(/"/g, '').trim() : 'Car';
+
+                    const polygon = [];
+                    const ptsTextArr = ptsNode.textContent.trim().split(/\s+/).filter(val => val !== "");
+                    for (let j = 0; j + 1 < ptsTextArr.length; j += 2) {
+                        polygon.push({ x: parseInt(ptsTextArr[j]), y: parseInt(ptsTextArr[j + 1]) });
+                    }
+                    slots.push({ id, type, polygon });
+                }
+            }
+
+            nextSlotId = slots.length > 0 ? Math.max(...slots.map(s => s.id)) + 1 : 1;
+            updateSlotList();
+            redraw();
+            drawStatus.textContent = `Template loaded: ${slots.length} slots ready to edit.`;
+            document.getElementById('btnFinishSlot').disabled = false;
+            document.getElementById('btnClearAll').disabled = false;
+        }
+
+        const container = document.getElementById('canvas-container');
+        function resizeCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            redraw();
+        }
+        new ResizeObserver(resizeCanvas).observe(container);
+
+        function canvasToImage(cx, cy) {
+            if (!imageW || !imageH) return { x: cx, y: cy };
+            const scaleX = imageW / canvas.width;
+            const scaleY = imageH / canvas.height;
+            const scale = Math.max(scaleX, scaleY);
+            const dispW = imageW / scale;
+            const dispH = imageH / scale;
+            const offX = (canvas.width - dispW) / 2;
+            const offY = (canvas.height - dispH) / 2;
+            return {
+                x: Math.round((cx - offX) * scale),
+                y: Math.round((cy - offY) * scale)
+            };
+        }
+
+        function imgToCanvas(ix, iy) {
+            const scale = bgImage ? Math.min(canvas.width / imageW, canvas.height / imageH) : 1;
+            const ox = bgImage ? (canvas.width - imageW * scale) / 2 : 0;
+            const oy = bgImage ? (canvas.height - imageH * scale) / 2 : 0;
+            return { x: ix * scale + ox, y: iy * scale + oy };
+        }
+
+        function redraw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (bgImage) {
+                const scale = Math.min(canvas.width / imageW, canvas.height / imageH);
+                ctx.drawImage(bgImage, (canvas.width - imageW * scale) / 2, (canvas.height - imageH * scale) / 2, imageW * scale, imageH * scale);
+            }
+
+            slots.forEach((slot, idx) => {
+                if (slot.polygon.length < 2) return;
+                ctx.beginPath();
+                const p0 = imgToCanvas(slot.polygon[0].x, slot.polygon[0].y);
+                ctx.moveTo(p0.x, p0.y);
+                slot.polygon.forEach(p => { const c = imgToCanvas(p.x, p.y); ctx.lineTo(c.x, c.y); });
+                ctx.closePath();
+
+                ctx.strokeStyle = idx === selectedSlotIdx ? '#3b82f6' : (slot.type === 'Motorcycle' ? '#a855f7' : '#22c55e');
+                if (idx === selectedSlotIdx) { ctx.fillStyle = 'rgba(59, 130, 246, 0.2)'; ctx.fill(); }
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                const cx = slot.polygon.reduce((s, p) => s + p.x, 0) / slot.polygon.length;
+                const cy = slot.polygon.reduce((s, p) => s + p.y, 0) / slot.polygon.length;
+                const cc = imgToCanvas(cx, cy);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 16px Inter';
+                ctx.fillText(slot.id, cc.x - 5, cc.y + 5);
+            });
+
+            if (currentPoly.length > 0) {
+                ctx.beginPath();
+                const p0 = imgToCanvas(currentPoly[0].x, currentPoly[0].y);
+                ctx.moveTo(p0.x, p0.y);
+                currentPoly.forEach(p => { const c = imgToCanvas(p.x, p.y); ctx.lineTo(c.x, c.y); });
+                ctx.strokeStyle = currentType === 'Motorcycle' ? '#a855f7' : '#22c55e';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                currentPoly.forEach(p => {
+                    const c = imgToCanvas(p.x, p.y);
+                    ctx.beginPath(); ctx.arc(c.x, c.y, 4, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ef4444'; ctx.fill();
+                });
+            }
+        }
+
+        canvas.addEventListener('contextmenu', e => { e.preventDefault(); finishSlot(); });
+        canvas.addEventListener('mousedown', e => {
+            if (!bgImage) return;
+            const rect = canvas.getBoundingClientRect();
+
+            if (e.button === 2) {
+                finishSlot();
+                return;
+            }
+
+            currentPoly.push(canvasToImage(e.clientX - rect.left, e.clientY - rect.top));
+            redraw();
+        });
+
+        function finishSlot() {
+            if (currentPoly.length >= 3) {
+                slots.push({ id: nextSlotId++, type: currentType, polygon: [...currentPoly] });
+                currentPoly = [];
+                updateSlotList();
+                redraw();
+            } else if (currentPoly.length > 0) {
+                drawStatus.textContent = "Need at least 3 points to finish a slot.";
+            }
+        }
+
+        function clearAll() {
+            slots = []; currentPoly = []; nextSlotId = 1; selectedSlotIdx = -1;
+            updateSlotList(); redraw();
+        }
+
+        function deleteSelectedSlot() {
+            if (selectedSlotIdx >= 0 && selectedSlotIdx < slots.length) {
+                slots.splice(selectedSlotIdx, 1);
+                slots.forEach((s, i) => s.id = i + 1);
+                nextSlotId = slots.length + 1;
+                selectedSlotIdx = -1;
+                updateSlotList(); redraw();
+            }
+        }
+
+        function updateSlotList() {
+            const list = document.getElementById('slotList');
+            list.innerHTML = '';
+            document.getElementById('slotCountOverview').innerText = slots.length;
+
+            slots.forEach((slot, idx) => {
+                const li = document.createElement('li');
+                li.innerText = `Slot ${slot.id} - ${slot.type} (${slot.polygon.length} pts)`;
+                if (idx === selectedSlotIdx) li.classList.add('selected');
+                li.onclick = () => { selectedSlotIdx = idx; updateSlotList(); redraw(); };
+                list.appendChild(li);
+            });
+            document.getElementById('btnDeleteSlot').disabled = selectedSlotIdx < 0;
+        }
+
+        function saveTemplate() {
+            if (slots.length === 0) { alert('No slots drawn! Draw parking slots first.'); return; }
+
+            // สร้าง Default Name แบบมีวันที่และเวลา ป้องกันการเซฟทับ (ตั้งชื่อซ้ำ)
+            let defaultName = `ParkingTemplate_${drawCamId}_` + new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+            let templateName = prompt("ตั้งชื่อ Template (ระบบเพิ่มเวลาต่อท้ายให้เพื่อให้สร้างไฟล์ใหม่แทนการเซฟทับ):", defaultName);
+            if (templateName === null) return; // กรณีกดยกเลิก
+            if (templateName.trim() === '') templateName = defaultName;
+            
+            // กันผู้ใช้พิมพ์อักขระพิเศษที่จะทำให้การบันทึกไฟล์มีปัญหา
+            templateName = templateName.replace(/[^a-zA-Z0-9_\-]/g, '_');
+
+            let xml = '<?xml version="1.0"?>\n<opencv_storage>\n';
+            xml += `<name>${templateName}</name>\n`;
+            xml += `<description>"Auto-generated by Web Dashboard"</description>\n`;
+            xml += `<imageWidth>${imageW || 1280}</imageWidth>\n`;
+            xml += `<imageHeight>${imageH || 720}</imageHeight>\n`;
+            xml += `<slotCount>${slots.length}</slotCount>\n`;
+
+            slots.forEach((slot, i) => {
+                xml += `  <slot_${i}_id>${slot.id}</slot_${i}_id>\n`;
+                xml += `  <slot_${i}_type>"${slot.type}"</slot_${i}_type>\n`;
+                const pts = slot.polygon.map(p => p.x + ' ' + p.y).join(' ');
+
+                xml += `  <slot_${i}_points>\n    ${pts}</slot_${i}_points>\n`;
+            });
+            xml += '</opencv_storage>\n';
+
+            // 1. ส่งข้อมูลให้ C++ ทำงาน
+            fetch(`/api/${drawCamId}/save_template`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/xml' },
+                body: xml
+            }).then(r => r.json()).then(result => {
+                if (result.status === 'success') {
+
+                    // 2. แอบฝังโค้ด XML ลงใน cameras.json ด้วย เพื่อให้โหลดผ่านเว็บจากเครื่องอื่นได้
+                    let camIndex = camerasData.findIndex(c => c.id === drawCamId);
+                    if (camIndex !== -1) {
+                        camerasData[camIndex].templateXml = xml;
+                        fetch('/api/cameras', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(camerasData)
+                        }).then(() => {
+                            alert(`Template saved for Camera ${drawCamId}!`);
+                            closeParkingOverlay();
+                        });
+                    } else {
+                        alert(`Template saved for Camera ${drawCamId}!`);
+                        closeParkingOverlay();
+                    }
+
+                } else {
+                    alert('Save failed. Check if camera is connected.');
+                }
+            }).catch(() => {
+                alert('Error saving template.');
+            });
+        }
     </script>
 </body>
 

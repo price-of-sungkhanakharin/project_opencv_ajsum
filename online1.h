@@ -313,6 +313,12 @@ public:
 		g_lastDrawnStatus_online.clear();
 		g_labelCache_online.clear(); // [PHASE 3] Clear label cache
 		g_redOverlayBuffer_online = cv::Mat(); // [PHASE 3] Clear red overlay buffer
+		
+		// [BUGFIX] Properly kill old parking logic to prevent templates from persisting on new connection
+		if (g_pm_logic_online) { delete g_pm_logic_online; g_pm_logic_online = nullptr; }
+		if (g_pm_display_online) { delete g_pm_display_online; g_pm_display_online = nullptr; }
+		g_parkingEnabled_online.store(false);
+		templateSet_online = false;
 	}
 
 	cv::Mat GetRawFrame() {
@@ -2268,8 +2274,8 @@ private: System::Void UploadForm_FormClosing(System::Object^ sender, FormClosing
 		sprintf_s(timeBuf, sizeof(timeBuf), "%04d-%02d-%02dT%02d:%02d:%02d", 
                   st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 
-		// Dynamic Camera ID string representation
-		std::string camId = "camera_" + std::to_string(cameraId);
+		// ใช้รูปแบบ URL เพื่อให้ตรงกับระบบ Database ของเพื่อน
+		std::string camId = "http://" + GetLocalIP() + ":8080/" + std::to_string(cameraId) + "/video";
 
 		// Replace backslashes with forward slashes for cross-platform JSON API usage
 		std::replace(snapshotPath.begin(), snapshotPath.end(), '\\', '/');
@@ -2363,7 +2369,8 @@ private: System::Void UploadForm_FormClosing(System::Object^ sender, FormClosing
 		sprintf_s(timeBuf, sizeof(timeBuf), "%04d-%02d-%02dT%02d:%02d:%02d", 
                   st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 
-		std::string camId = "camera_" + std::to_string(cameraId);
+		// ใช้รูปแบบ URL เพื่อให้ตรงกับระบบ Database ของเพื่อน
+		std::string camId = "http://" + GetLocalIP() + ":8080/" + std::to_string(cameraId) + "/video";
 
 		// MongoEngine ParkingArea representation
 		json areaStats = {

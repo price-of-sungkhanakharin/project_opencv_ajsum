@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "online1.h"
 #include "popup1.h"
 #include "MjpegServer.h"
@@ -73,8 +73,10 @@ inline bool TriggerSaveTemplateHeadlessWrapperMain(int cameraId, std::string xml
         }
     }
     
-    std::string filename = "parking_templates/" + templateName + ".xml";
+    std::string filename = "C:\\camera_ids\\parking_templates\\" + templateName + ".xml";
     DumpLog("[API] Extracted template name: " + templateName + " -> Saving to: " + filename);
+    CreateDirectoryA("C:\\camera_ids", NULL);
+    CreateDirectoryA("C:\\camera_ids\\parking_templates", NULL);
     std::ofstream out(filename);
     if (!out) {
         DumpLog("[API] ERROR: Could not open " + filename + " for writing!");
@@ -85,6 +87,14 @@ inline bool TriggerSaveTemplateHeadlessWrapperMain(int cameraId, std::string xml
     
     bool loadResult = GetCam(cameraId)->LoadParkingTemplate_Online(filename);
     DumpLog("[API] LoadParkingTemplate_Online returned: " + std::string(loadResult ? "true" : "false"));
+    
+    // [BUGFIX] Auto-enable parking mode after successful template load via web API
+    // In the old Windows Forms UI, the user had to manually tick "Parking Mode" checkbox.
+    // Since the web SPA has no such checkbox, we auto-enable it here.
+    if (loadResult) {
+        GetCam(cameraId)->g_parkingEnabled_online.store(true);
+        DumpLog("[API] Parking mode auto-enabled for camera " + std::to_string(cameraId));
+    }
     return loadResult;
 }
 
@@ -180,6 +190,7 @@ void Main(array<String^>^ args) {
     g_globalWebServer->onSaveTemplate = TriggerSaveTemplateHeadlessWrapperMain;
     g_globalWebServer->onConnectOnline = TriggerOnlineCameraHeadlessWrapperMain;
     g_globalWebServer->onDisconnect = TriggerDisconnectHeadlessWrapperMain;
+    g_globalWebServer->onCheckStatus = [](int cameraId) { return (bool)GetCam(cameraId)->isProcessing.load(); }; // [NEW] Track true connection state
 
     // Start the streamer thread to continuously feed frames to the MjpegServer
     g_streamThreadRunning = true;

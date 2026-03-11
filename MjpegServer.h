@@ -15,9 +15,9 @@
 #include <iostream>
 #include <functional>
 #include <fstream>
-#include <mutex>
 #include <algorithm>
 #include <cctype>
+
 static std::mutex g_logMutex;
 inline void DumpLog(const std::string& msg) {
     std::lock_guard<std::mutex> lock(g_logMutex);
@@ -41,7 +41,7 @@ private:
     
     std::map<int, cv::Mat> latestFrames;
     std::mutex frameMutex;
-    std::map<int, std::unique_ptr<std::condition_variable>> frameCVs; // Need unique_ptr because cv isn't copyable
+    std::map<int, std::unique_ptr<std::condition_variable>> frameCVs; 
     std::map<int, bool> newFrameAvailable;
     
     int port;
@@ -52,18 +52,21 @@ private:
     using SaveTemplateCallback = std::function<bool(int, std::string)>;
     using GetFrameCallback = std::function<cv::Mat(int)>;
     using DisconnectCallback = std::function<void(int)>;
+    using CheckStatusCallback = std::function<bool(int)>;
 public:
     ConnectOnlineCallback onConnectOnline;
     SaveTemplateCallback onSaveTemplate;
     GetFrameCallback onGetFrame;
     GetFrameCallback onGetRawFrame;
     DisconnectCallback onDisconnect;
+    CheckStatusCallback onCheckStatus; 
     
     void SetConnectOnlineCallback(ConnectOnlineCallback cb) { onConnectOnline = cb; }
     void SetSaveTemplateCallback(SaveTemplateCallback cb) { onSaveTemplate = cb; }
     void SetGetFrameCallback(GetFrameCallback cb) { onGetFrame = cb; }
     void SetGetRawFrameCallback(GetFrameCallback cb) { onGetRawFrame = cb; }
     void SetDisconnectCallback(DisconnectCallback cb) { onDisconnect = cb; }
+    void SetCheckStatusCallback(CheckStatusCallback cb) { onCheckStatus = cb; } 
 private:
 
     void ServerLoop() {
@@ -74,7 +77,7 @@ private:
             
             timeval timeout;
             timeout.tv_sec = 0;
-            timeout.tv_usec = 100000; // 100ms timeout
+            timeout.tv_usec = 100000; 
             
             int activity = select(0, &readfds, NULL, NULL, &timeout);
             
@@ -97,14 +100,11 @@ private:
         buffer[bytesRead] = '\0';
         std::string request(buffer);
         
-        // Only try to read a full body for POST requests — skip for GET/streaming
         bool isPost = (request.size() >= 4 && request[0] == 'P' && request[1] == 'O');
         if (isPost) {
-            // Find Content-Length in headers (case-insensitive search on just the header portion)
             size_t headersEnd = request.find("\r\n\r\n");
             if (headersEnd != std::string::npos) {
                 std::string headers = request.substr(0, headersEnd);
-                // Lowercase only the small headers block
                 std::string headersLower = headers;
                 std::transform(headersLower.begin(), headersLower.end(), headersLower.begin(), ::tolower);
                 
@@ -136,14 +136,12 @@ private:
         
         std::string method = request.substr(0, firstSpace);
         std::string path = request.substr(firstSpace + 1, secondSpace - firstSpace - 1);
-        // Strip query string (e.g. ?t=123456) before route matching
         size_t qpos = path.find('?');
         if (qpos != std::string::npos) path = path.substr(0, qpos);
 
-        int cameraId = 1; // Default to 1
+        int cameraId = 1; 
         std::string actionPath = path;
 
-        // Parse /{id}/page_name
         if (path.length() > 1 && isdigit(path[1])) {
             size_t nextSlash = path.find('/', 1);
             if (nextSlash != std::string::npos) {
@@ -153,7 +151,6 @@ private:
                 } catch (...) {}
             }
         }
-        // Parse /api/{id}/action
         else if (path.find("/api/") == 0 && path.length() > 5 && isdigit(path[5])) {
             size_t nextSlash = path.find('/', 5);
             if (nextSlash != std::string::npos) {
@@ -178,6 +175,8 @@ private:
             ServeConnectOnline(clientSocket, request, cameraId);
         } else if (actionPath == "/api/disconnect" && request.find("POST") == 0) {
             ServeDisconnect(clientSocket, cameraId);
+        } else if (actionPath == "/api/camera_status" && method == "GET") { 
+            ServeCameraStatus(clientSocket);
         } else if (actionPath == "/api/cameras" && method == "GET") {
             ServeCamerasList(clientSocket);
         } else if (actionPath == "/api/cameras" && method == "POST") {
@@ -186,6 +185,17 @@ private:
             ServeAnomalyEvents(clientSocket, request);
         } else if (actionPath == "/api/parking_areas") {
             ServeParkingAreas(clientSocket, request);
+        } else if (actionPath == "/api/list_templates" && method == "GET") { // [API ดึงรายชื่อไฟล์ XML]
+            ServeTemplateList(clientSocket);
+        } else if (actionPath.find("/templates/") == 0) { // [API ดาวน์โหลดไฟล์ XML ไปให้หน้าเว็บ]
+            std::string fileName = actionPath.substr(11);
+            if (fileName.find("..") != std::string::npos || fileName.find("/") != std::string::npos || fileName.find("\\") != std::string::npos) {
+                std::string notFound = "HTTP/1.1 403 Forbidden\r\n\r\nForbidden";
+                send(clientSocket, notFound.c_str(), (int)notFound.length(), 0);
+                closesocket(clientSocket);
+            } else {
+                ServeFileDirectly(clientSocket, fileName, request);
+            }
         } else if (actionPath.find("/locvideo/") == 0) {
             ServeFileDirectly(clientSocket, "C:" + actionPath, request);
         } else if (actionPath.find("/smart_parking_violations/") == 0) {
@@ -194,16 +204,8 @@ private:
             std::string realPath = actionPath;
             realPath.replace(0, 12, "/smart_parking_violations/");
             ServeFileDirectly(clientSocket, "C:" + realPath, request);
-        } else if (actionPath == "/setup_online" || actionPath == "/setup_online.html") {
-            ServeHtml(clientSocket, "setup_online.html");
-        } else if (actionPath == "/setup_parking" || actionPath == "/setup_parking.html") {
-            ServeHtml(clientSocket, "setup_parking.html");
-        } else if (actionPath == "/camera" || actionPath == "/camera.html") {
-            ServeHtml(clientSocket, "camera.html");
-        } else if (actionPath == "/dashboard") {
+        } else if (actionPath == "/" || actionPath == "/index.html" || actionPath == "/home" || actionPath == "/home.html"  || actionPath == "/dashboard" || actionPath == "/setup_online" || actionPath == "/setup_parking" || actionPath == "/camera") {
             ServeHtml(clientSocket, "index.html");
-        } else if (actionPath == "/" || actionPath == "/index.html" || actionPath == "/home" || actionPath == "/home.html") {
-            ServeHtml(clientSocket, "home.html");
         } else {
             std::string notFound = "HTTP/1.1 404 Not Found\r\nContent-Length: 9\r\n\r\nNot Found";
             send(clientSocket, notFound.c_str(), (int)notFound.length(), 0);
@@ -212,12 +214,41 @@ private:
     }
 
     // ==========================================
-    // [PHASE 14] CAMERA MANAGEMENT ENDPOINTS
+    // [NEW] API อ่านไฟล์ XML ในโฟลเดอร์เครื่องหลัก
     // ==========================================
+    void ServeTemplateList(SOCKET clientSocket) {
+        std::string jsonStr = "[";
+        WIN32_FIND_DATAA findData;
+        // ค้นหาไฟล์ .xml ในโฟลเดอร์โปรแกรมที่รันอยู่
+        HANDLE hFind = FindFirstFileA("*.xml", &findData);
+        bool first = true;
+        if (hFind != INVALID_HANDLE_VALUE) {
+            do {
+                if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                    if (!first) jsonStr += ",";
+                    jsonStr += "\"" + std::string(findData.cFileName) + "\"";
+                    first = false;
+                }
+            } while (FindNextFileA(hFind, &findData));
+            FindClose(hFind);
+        }
+        jsonStr += "]";
+
+        std::string response =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json; charset=utf-8\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Content-Length: " + std::to_string(jsonStr.length()) + "\r\n"
+            "Connection: close\r\n\r\n" + jsonStr;
+            
+        send(clientSocket, response.c_str(), (int)response.length(), 0);
+        closesocket(clientSocket);
+    }
+
     void ServeCamerasList(SOCKET clientSocket) {
         std::string filePath = "C:\\camera_ids\\cameras.json";
         std::ifstream file(filePath, std::ios::binary | std::ios::ate);
-        std::string jsonContent = "[]"; // Default
+        std::string jsonContent = "[]"; 
 
         if (file.is_open()) {
             std::streamsize size = file.tellg();
@@ -248,7 +279,6 @@ private:
         
         if (bodyPos != std::string::npos) {
             std::string body = request.substr(bodyPos + 4);
-            // Ensure folder exists
             system("mkdir C:\\camera_ids 2>nul");
             
             std::ofstream outFile("C:\\camera_ids\\cameras.json");
@@ -271,18 +301,13 @@ private:
         closesocket(clientSocket);
     }
 
-    // ==========================================
-    // [PHASE 3] NEW ENDPOINTS FOR JSON API
-    // ==========================================
     void ServeAnomalyEvents(SOCKET clientSocket, const std::string& request) {
-        // Default to today
         SYSTEMTIME st;
         GetLocalTime(&st);
         char defaultDate[32];
         sprintf_s(defaultDate, sizeof(defaultDate), "%04d%02d%02d", st.wYear, st.wMonth, st.wDay);
         std::string dateTarget = defaultDate;
 
-        // Extract ?date=YYYY-MM-DD to YYYYMMDD
         size_t queryPos = request.find("date=");
         if (queryPos != std::string::npos) {
             size_t spacePos = request.find(' ', queryPos);
@@ -311,14 +336,12 @@ private:
     }
 
     void ServeParkingAreas(SOCKET clientSocket, const std::string& request) {
-        // Default to today
         SYSTEMTIME st;
         GetLocalTime(&st);
         char defaultDate[32];
         sprintf_s(defaultDate, sizeof(defaultDate), "%04d%02d%02d", st.wYear, st.wMonth, st.wDay);
         std::string dateTarget = defaultDate;
 
-        // Extract ?date=YYYY-MM-DD
         size_t queryPos = request.find("date=");
         if (queryPos != std::string::npos) {
             size_t spacePos = request.find(' ', queryPos);
@@ -363,10 +386,8 @@ private:
             }
         };
 
-        // 1. Scan root (legacy support)
         scanDirectory(dirPath);
 
-        // 2. Scan subdirectories (camera_1, camera_2, etc.)
         WIN32_FIND_DATAA subFindData;
         HANDLE hSubFind = FindFirstFileA((dirPath + "\\*").c_str(), &subFindData);
         if (hSubFind != INVALID_HANDLE_VALUE) {
@@ -381,7 +402,6 @@ private:
             FindClose(hSubFind);
         }
         
-        // Sort descending (newest epoch first)
         std::sort(fileNames.begin(), fileNames.end(), std::greater<std::string>());
         
         std::string jsonContent = "[";
@@ -419,13 +439,11 @@ private:
     }
 
     void ServeFileDirectly(SOCKET clientSocket, const std::string& fsPath, const std::string& httpRequest) {
-        // Strip out the query param safely (e.g. ?time=45)
         std::string cleanPath = fsPath;
         size_t queryPos = cleanPath.find("?");
         if (queryPos != std::string::npos) {
             cleanPath = cleanPath.substr(0, queryPos);
         }
-        // Force replace / with \\ for windows paths just in case
         std::replace(cleanPath.begin(), cleanPath.end(), '/', '\\');
 
         std::ifstream file(cleanPath, std::ios::binary | std::ios::ate);
@@ -443,6 +461,7 @@ private:
         if (cleanPath.find(".jpg") != std::string::npos || cleanPath.find(".jpeg") != std::string::npos) contentType = "image/jpeg";
         else if (cleanPath.find(".webm") != std::string::npos) contentType = "video/webm";
         else if (cleanPath.find(".mp4") != std::string::npos) contentType = "video/mp4";
+        else if (cleanPath.find(".xml") != std::string::npos) contentType = "text/xml"; // [NEW] รองรับ XML
 
         long long start = 0;
         long long end = fileSize - 1;
@@ -563,7 +582,6 @@ private:
             if (!parsedPath.empty()) reqPath = parsedPath;
         }
 
-        // Fire the connection in a background thread — don't block the HTTP response
         DumpLog("[HTTP] Received /api/connect_online for " + ip + ":" + port + reqPath);
 
         if (onConnectOnline) {
@@ -574,7 +592,6 @@ private:
             }).detach();
         }
 
-        // Return 202 Accepted immediately
         std::string jsonResponse = "{\"status\":\"connecting\"}";
         std::string response = 
             "HTTP/1.1 202 Accepted\r\n"
@@ -583,6 +600,29 @@ private:
             "Content-Length: " + std::to_string(jsonResponse.length()) + "\r\n"
             "Connection: close\r\n\r\n" + jsonResponse;
 
+        send(clientSocket, response.c_str(), (int)response.length(), 0);
+        closesocket(clientSocket);
+    }
+
+    void ServeCameraStatus(SOCKET clientSocket) {
+        std::string jsonStr = "[";
+        for (int id = 1; id <= 4; ++id) {
+            bool isLive = false;
+            if (onCheckStatus) {
+                isLive = onCheckStatus(id);
+            }
+            jsonStr += "{\"id\":" + std::to_string(id) + ",\"live\":" + (isLive ? "true" : "false") + "}";
+            if (id < 4) jsonStr += ",";
+        }
+        jsonStr += "]";
+
+        std::string response =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Content-Length: " + std::to_string(jsonStr.length()) + "\r\n"
+            "Connection: close\r\n\r\n" + jsonStr;
+            
         send(clientSocket, response.c_str(), (int)response.length(), 0);
         closesocket(clientSocket);
     }
@@ -702,13 +742,11 @@ private:
     }
 
     void ServeMjpegStream(SOCKET clientSocket, int cameraId) {
-        // Add to client list
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
             clientSockets.push_back(clientSocket);
         }
         
-        // HTTP Stream Header
         std::string httpHeader = "HTTP/1.1 200 OK\r\n"
                                  "Content-Type: multipart/x-mixed-replace; boundary=mjpegstream\r\n"
                                  "Connection: keep-alive\r\n"
@@ -727,13 +765,12 @@ private:
                     frameCVs[cameraId] = std::make_unique<std::condition_variable>();
                 }
                 if (!frameCVs[cameraId]->wait_for(lock, std::chrono::milliseconds(500), [this, cameraId] { return newFrameAvailable[cameraId] || !isRunning; })) {
-                    // Timeout, check connection
                     int error = 0;
                     socklen_t len = sizeof(error);
                     if (getsockopt(clientSocket, SOL_SOCKET, SO_ERROR, (char*)&error, &len) != 0 || error != 0) {
-                        break; // Connection is dead
+                        break; 
                     }
-                    continue; // Timeout, no new frame, loop again
+                    continue; 
                 }
                 
                 if (!isRunning) break;
@@ -743,7 +780,6 @@ private:
                     continue;
                 }
                 
-                // Copy frame to avoid holding lock during encoding
                 frameToSend = latestFrames[cameraId].clone();
                 newFrameAvailable[cameraId] = false;
             }
@@ -755,22 +791,18 @@ private:
                                           "Content-Type: image/jpeg\r\n"
                                           "Content-Length: " + std::to_string(buffer.size()) + "\r\n\r\n";
                 
-                // Send Header
                 int bytesSent = send(clientSocket, frameHeader.c_str(), (int)frameHeader.length(), 0);
                 if (bytesSent == SOCKET_ERROR) break;
                 
-                // Send Image Data
                 bytesSent = send(clientSocket, (const char*)buffer.data(), (int)buffer.size(), 0);
                 if (bytesSent == SOCKET_ERROR) break;
                 
-                // Send Footer
                 std::string frameFooter = "\r\n";
                 bytesSent = send(clientSocket, frameFooter.c_str(), (int)frameFooter.length(), 0);
                 if (bytesSent == SOCKET_ERROR) break;
             }
         }
 
-        // Remove from client list
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
             auto it = std::find(clientSockets.begin(), clientSockets.end(), clientSocket);
@@ -802,7 +834,6 @@ public:
             return false;
         }
 
-        // Allow port reuse
         char opt = 1;
         setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
@@ -832,7 +863,6 @@ public:
         if (!isRunning) return;
         isRunning = false;
         
-        // Notify any waiting threads to wake up and exit
         {
             std::lock_guard<std::mutex> lock(frameMutex);
             for (auto& pair : frameCVs) {
@@ -849,7 +879,6 @@ public:
             serverThread.join();
         }
 
-        // Close all client sockets
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
             for (SOCKET sock : clientSockets) {
@@ -873,8 +902,6 @@ public:
             }
         }
         if (frameCVs[cameraId]) frameCVs[cameraId]->notify_all();
-
-		// (Removed debug print here to save resources)
     }
 
     void SetStats(int cameraId, const std::string& json) {
